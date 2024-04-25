@@ -11,28 +11,28 @@ NB_CLASSES_USED = 7 # excludes false positive and none
 
 model_filepath = "saved_models/checkpoint"
 
-fields_to_keep = ["Gyr_X", "Gyr_Y", "Gyr_Z", "Acc_X", "Acc_Y", "Acc_Z"]
+fields_to_keep = ["Euler_X","Euler_Y","Euler_Z","Gyr_X", "Gyr_Y", "Gyr_Z", "Acc_X", "Acc_Y", "Acc_Z"]
 
 
 sessions = {
         "1331": {
-            "path": "data/raw/2009/1331",
+            "path": "2009/1331",
             "sample_time_fine_synchro": 969369596 - 4000000
         },
         "1414": {
-            "path": "data/raw/2009/1414",
+            "path": "2009/1414",
             "sample_time_fine_synchro": 3572382138 + ((320 - 66 + 10) * 1200000)
         },
         "1304": {
-            "path": "data/raw/1110/1304",
+            "path": "1110/1304",
             "sample_time_fine_synchro": 115376653
         },
         "1404": {
-            "path": "data/raw/1110/1404",
+            "path": "1110/1404",
             "sample_time_fine_synchro": 3702624824
         },
         "1128": {
-            "path": "data/raw/1128",
+            "path": "1128",
             "sample_time_fine_synchro": 1479527966
         }
     }

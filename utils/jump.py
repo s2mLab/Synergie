@@ -5,7 +5,7 @@ import scipy as sp
 import constants
 from constants import jumpType
 from utils import plot
-
+import math
 
 class Jump:
     def __init__(self, start: int, end: int, df: pd.DataFrame, jump_type: jumpType = jumpType.NONE):
@@ -47,8 +47,21 @@ class Jump:
         """
 
         # initial frame is the reference frame, I want to compute rotations around the "Euler_X" axis
+        df_rots = df[["SampleTimeFine", "Gyr_X"]]
+        def check(s):
+            return math.isinf(s["Gyr_X"])
 
-        df_rots = df[["Euler_X", "Euler_Y", "Euler_Z"]]
+        df_rots = df_rots.drop(df_rots[df_rots.apply(check,axis=1)].index)
+        n = len(df_rots)
+
+        tps = df_rots['SampleTimeFine'].to_numpy().reshape(1,n)[0]
+        tps = tps - tps[0]
+        difftps = np.array(tps[1:]-tps[:-1])/1e6
+        vit = df_rots['Gyr_X'].to_numpy().reshape(1,n)[0][:-1]
+        pos = np.nansum(np.array(vit)*np.array(difftps))
+        total_rotation_x = np.abs(pos/360)
+
+        """ df_rots = df[["Euler_X", "Euler_Y", "Euler_Z"]]
         initial_frame_euler = initial_frame[["Euler_X", "Euler_Y", "Euler_Z"]]
 
         r = sp.spatial.transform.Rotation.from_euler('xyz', initial_frame_euler.to_numpy(), degrees=True).as_matrix()
@@ -78,10 +91,10 @@ class Jump:
             total_rotation_x += orientation_diff
 
             # Update previous orientation for the next iteration
-            prev_orientation = orientation
+            prev_orientation = orientation """
 
         # Return the absolute value of the total rotation
-        return np.abs(total_rotation_x)/360
+        return total_rotation_x
 
     def dynamic_resize(self, df: pd.DataFrame = None):
         """
@@ -95,8 +108,13 @@ class Jump:
         """
 
         begin_df = self.start - 200
+        end_df = self.end + 100
+        timelapse = np.arange(begin_df,end_df)
 
-        resampled_df = df[begin_df:begin_df + 400].copy(deep=True)
+        takeoff_df = df[begin_df:self.start +50].copy(deep=True)
+        reception_df = df[self.end-50:end_df].copy(deep=True)
+
+        resampled_df = pd.concat([takeoff_df,reception_df])
 
         return resampled_df
 
