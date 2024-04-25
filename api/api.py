@@ -5,8 +5,8 @@ sys.path.append(os.path.dirname("../"))
 
 from fastapi import FastAPI, UploadFile
 from pydantic import BaseModel
-from data_generation import trainingSession
-from inference.inference import infer
+from core.data_treatment.data_generation import trainingSession
+from core.data_treatment.inference.inference import infer
 
 app = FastAPI()
 

@@ -27,7 +27,7 @@ Add a new dataset in constants.sessions.
 
 ## About the dataset
 
-Current model has been trained with a dataset of roughly 500 annodated jumps.
+Current model has been trained with a dataset of roughly 500 annotated jumps.
 Because of privacy concerns, the dataset is not disclosed.
 
 

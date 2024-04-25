@@ -9,7 +9,8 @@ SYNCHROFRAME = 200  # in frames
 
 NB_CLASSES_USED = 7 # excludes false positive and none
 
-model_filepath = "saved_models/checkpoint"
+modeltype_filepath = "core/model/saved_models/checkpoint"
+modelsuccess_filepath = "core/model/saved_models/success"
 
 fields_to_keep = ["Euler_X","Euler_Y","Euler_Z","Gyr_X", "Gyr_Y", "Gyr_Z", "Acc_X", "Acc_Y", "Acc_Z"]
 
@@ -52,8 +53,10 @@ class jumpType(Enum):
     LOOP = 4
     AXEL = 5
 
-    # other
-    FALL = 6
-
     FALSE_POSITIVE = 7
     NONE = 8  # none is intended to be used when the annotation could not be completed (ice skater off frame at the time of the jump)
+
+class jumpSuccess(Enum):
+    FALL = 0
+    SUCCESS = 1
+    NONE = 2 # used before the annotation
