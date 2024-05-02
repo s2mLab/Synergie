@@ -4,23 +4,23 @@ from core.database.DatabaseManager import DatabaseManager
 from core.data_treatment.DataCollector import *
 
 class StatsPage:
-    def __init__(self, training : int, db_manager : DatabaseManager):
+    def __init__(self, training : int, db_manager : DatabaseManager) -> None:
         self.frame = tk.Frame()
         self.training = training
         tk.Button(self.frame, text='Go to Training Page',
                   command=self.return_training_page).grid(row=10, column=10)
         self.data = get_training_session_data(int(self.training), db_manager)
 
-    def create_page(self, main):
+    def create_page(self, main) -> None:
         self.main = main
         self.create_table()
         self.frame.grid()
 
-    def return_training_page(self):
+    def return_training_page(self) -> None:
         self.frame.grid_forget()
         self.main.grid()
 
-    def create_table(self):
+    def create_table(self) -> None:
         
         tk.Label(self.frame, text="Success").grid(row=0, column=1)
         tk.Label(self.frame, text="Failure").grid(row=0, column=2)

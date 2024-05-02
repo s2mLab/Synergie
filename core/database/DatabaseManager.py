@@ -57,4 +57,7 @@ class DatabaseManager:
         data_skaters = self.db.execute("SELECT skater_id, skater_name FROM skater ")
         data_skaters = np.vectorize(lambda x : SkaterData(x["skater_id"], x["skater_name"]))(data_skaters)
         return data_skaters
+    
+    def delete_skater_data(self, skater_id : int) -> None:
+        self.db.execute("DELETE FROM skater WHERE skater_id == ?", skater_id)
         

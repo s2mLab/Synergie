@@ -23,7 +23,7 @@ db = SQL("sqlite:///database/database.db")
                 skater_id INTEGER NOT NULL,
                 training_date DATE NOT NULL,
                 CONSTRAINT training_id PRIMARY KEY (training_id)
-                FOREIGN KEY(skater_id) REFERENCES skater(skater_id)
+                FOREIGN KEY(skater_id) REFERENCES skater(skater_id) ON DELETE CASCADE
 );"""
 #)
 
@@ -35,6 +35,6 @@ db = SQL("sqlite:///database/database.db")
                 jump_success BOOLEAN NOT NULL,
                 jump_time INTEGER nOT NULL,
                 CONSTRAINT jump_id PRIMARY KEY (jump_id)
-                FOREIGN KEY(training_id) REFERENCES training(training_id)
+                FOREIGN KEY(training_id) REFERENCES training(training_id) ON DELETE CASCADE
 );"""
 #)
