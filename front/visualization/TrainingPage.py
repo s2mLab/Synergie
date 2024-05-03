@@ -22,9 +22,10 @@ class TrainingPage:
 
     def create_training_button(self) -> None:
         n = len(self.trainings)
-        sep = n//2 + n%2
-        for i,training in enumerate(self.trainings):
-            TrainingButton(self.frame, training, i//sep, i%sep, self.db_manager)
+        if n>0:
+            sep = n//2 + n%2
+            for i,training in enumerate(self.trainings):
+                TrainingButton(self.frame, training, i//sep, i%sep, self.db_manager)
 
 
 class TrainingButton:

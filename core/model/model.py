@@ -16,11 +16,11 @@ def lstm():
     model.add(keras.layers.Dense(16, activation='relu'))
     model.add(keras.layers.Dropout(0.2))
     # softmax
-    model.add(keras.layers.Dense(2, activation='softmax'))
+    model.add(keras.layers.Dense(2, activation='relu'))
 
     optimizer = keras.optimizers.Adam(learning_rate=0.000001)
 
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
     return model
 

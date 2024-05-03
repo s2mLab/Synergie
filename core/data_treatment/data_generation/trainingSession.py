@@ -7,7 +7,7 @@ from core.utils import plot
 from core.utils.jump import Jump
 
 
-def gather_jumps(df: pd.DataFrame) -> list:
+def gather_jumps(df: pd.DataFrame) -> list[Jump]:
     """
     detects and gathers all the jumps in a dataframe
     :param df: the dataframe containing the session data

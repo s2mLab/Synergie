@@ -24,9 +24,10 @@ class SkaterPage:
 
     def create_skater_button(self) -> None:
         n = len(self.skaters)
-        sep = n//2 + n%2
-        for i,skater in enumerate(self.skaters):
-            SkaterButton(self.frame, skater, i//sep, i%sep, self.db_manager)
+        if n>0:
+            sep = n//2 + n%2
+            for i,skater in enumerate(self.skaters):
+                SkaterButton(self.frame, skater, i//sep, i%sep, self.db_manager)
 
 
 class SkaterButton:

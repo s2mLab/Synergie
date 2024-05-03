@@ -41,7 +41,7 @@ def main():
         elif train_name == "success":
             dataset = Loader(path).get_success_data()
             trainer = training.Trainer(dataset, model.lstm(), constants.modelsuccess_filepath)
-            trainer.train(epochs=2)
+            trainer.train(epochs=20)
 
     if "-test" in sys.argv:  # test
         session_name = sys.argv[sys.argv.index("-test") + 1]
@@ -50,8 +50,10 @@ def main():
         path_pend = os.path.join("data/pending/",session["path"])
         model_test_type = model.load_model(constants.modeltype_filepath)
         model_test_success = model.load_model(constants.modelsuccess_filepath)
-        error_type = ModelPredictor(path_pend,model_test_type, model_test_success).checktype(path_anno)
-        error_success = ModelPredictor(path_pend,model_test_type, model_test_success).checksuccess(path_anno)
+        prediction = ModelPredictor(model_test_type, model_test_success)
+        prediction.load_from_csv(path_pend)
+        error_type = prediction.checktype(path_anno)
+        error_success = prediction.checksuccess(path_anno)
         print(error_type)
         print(error_success)
 
