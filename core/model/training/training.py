@@ -1,12 +1,8 @@
 import keras
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sn
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix
 
-import constants
 import core.model.model
 import core.model.training.loader as loader
 
@@ -35,7 +31,7 @@ class Trainer:
 
     def plot(self, trainin, path):
         self.plot_confusion_matrix(path)
-        plt.plot(trainin.history['loss'], label='training loss')
+        """ plt.plot(trainin.history['loss'], label='training loss')
         plt.plot(trainin.history['val_loss'], label='val loss')
         plt.legend()
         plt.show()
@@ -43,28 +39,33 @@ class Trainer:
         plt.plot(trainin.history['accuracy'], label='training accuracy')
         plt.plot(trainin.history['val_accuracy'], label='val accuracy')
         plt.legend()
-        plt.show()
+        plt.show() """
 
     def plot_confusion_matrix(self, path):
         model = self.model_load_best(path)
 
         y_pred = model.predict(self.dataset.features_test)
-        y_pred = np.argmax(y_pred, axis=1)
-        y_true = np.argmax(self.dataset.labels_test, axis=1)
-        results = confusion_matrix(y_true, y_pred)
+        y_pred2 = []
+        for x in y_pred:
+            y_pred2.append(np.argmax(x))
+        y_true = []
+        for x in self.dataset.labels_test:
+            y_true.append(np.argmax(x))
+        results = confusion_matrix(y_true, y_pred2)
+        print(results)
 
-        n = len(self.dataset.labels_test[0])
+        """ n = len(self.dataset.labels_test[0])
 
         labelled_rows = [constants.jumpType(i).name for i in range(n)]
 
-        df_cm = pd.DataFrame(results, labelled_rows, labelled_rows)
+        df_cm = pd.DataFrame(results)
         # plt.figure(figsize=(10,7))
         sn.set(font_scale=0.9)  # for label size
         sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})  # font size
 
-        plt.show()
+        plt.show() """
 
-        TP = np.diag(results)
+        """ TP = np.diag(results)
 
         FP = np.sum(results, axis=0) - TP
 
@@ -78,7 +79,7 @@ class Trainer:
 
         for i in range(n):
             print(
-                f"{constants.jumpType(i).name}: sensitivity: {TP[i] / (TP[i] + FN[i])}, specificity: {TP[i] / (TP[i] + FP[i])}")
+                f"{constants.jumpType(i).name}: sensitivity: {TP[i] / (TP[i] + FN[i])}, specificity: {TP[i] / (TP[i] + FP[i])}") """
 
     def train(self, epochs: int = 100, plot: bool = True):
         """

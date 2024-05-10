@@ -2,7 +2,6 @@ import os
 import sys
 
 import constants
-import numpy as np
 from core.data_treatment.data_generation.exporter import export
 from core.model import model
 from core.model.training import training
@@ -40,8 +39,8 @@ def main():
             trainer.train(epochs=350)
         elif train_name == "success":
             dataset = Loader(path).get_success_data()
-            trainer = training.Trainer(dataset, model.lstm(), constants.modelsuccess_filepath)
-            trainer.train(epochs=20)
+            trainer = training.Trainer(dataset, model.newmodel(), constants.modelsuccess_filepath)
+            trainer.train(epochs=50)
 
     if "-test" in sys.argv:  # test
         session_name = sys.argv[sys.argv.index("-test") + 1]

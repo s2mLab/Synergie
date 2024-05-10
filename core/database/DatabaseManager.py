@@ -9,6 +9,7 @@ class JumpData:
     jump_id : int
     training_id : int
     jump_type : int
+    jump_rotations : float
     jump_success : bool
     jump_time : int
 
@@ -36,7 +37,7 @@ class DatabaseManager:
         return new_id
     
     def save_jump_data(self, data : JumpData) -> int:
-        new_id = self.db.execute("INSERT INTO jump (training_id, jump_type, jump_success, jump_time) VALUES (?,?,?,?)", data.training_id, data.jump_type, data.jump_success, data.jump_time)
+        new_id = self.db.execute("INSERT INTO jump (training_id, jump_type, jump_rotations, jump_success, jump_time) VALUES (?,?,?,?,?)", data.training_id, data.jump_type, data.jump_rotations, data.jump_success, data.jump_time)
         return new_id
 
     def load_skater_data(self, skater_id : int) -> list[TrainingData]:
@@ -46,14 +47,14 @@ class DatabaseManager:
         return data_trainings
 
     def load_training_data(self, training_id : int) -> list[JumpData]:
-        data_jumps= self.db.execute("SELECT jump_id, training_id, jump_type, jump_success, jump_time FROM jump WHERE training_id == ? ORDER BY jump_time", training_id)
+        data_jumps= self.db.execute("SELECT jump_id, training_id, jump_type, jump_rotations, jump_success, jump_time FROM jump WHERE training_id == ? ORDER BY jump_time", training_id)
         if len(data_jumps)>0:
-            data_jumps = np.vectorize(lambda x : JumpData(x["jump_id"], x["training_id"], x["jump_type"], x["jump_success"], x["jump_time"]))(data_jumps)
+            data_jumps = np.vectorize(lambda x : JumpData(x["jump_id"], x["training_id"], x["jump_type"], x["jump_rotations"], x["jump_success"], x["jump_time"]))(data_jumps)
         return data_jumps
     
     def get_skater_from_training(self, training_id : int) -> str:
-        name = self.db.execute("SELECT skater_name FROM skater NATURAL JOIN training WHERE training_id == ?", training_id)
-        return name[0]["skater_name"]
+        name = self.db.execute("SELECT skater_id FROM skater NATURAL JOIN training WHERE training_id == ?", training_id)
+        return name[0]["skater_id"]
     
     def get_all_skaters(self) -> list[SkaterData]:
         data_skaters = self.db.execute("SELECT skater_id, skater_name FROM skater ")

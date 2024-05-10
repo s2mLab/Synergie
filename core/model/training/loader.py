@@ -74,7 +74,7 @@ class Loader:
         fields_to_keep = constants.fields_to_keep
 
         for index, row in mainFrame.iterrows():
-            if row["type"] != 8 and row["type"] != 6:
+            if row["type"] != 8:
                 # print(row)
                 jumpFrame = pd.read_csv(os.path.join(folder_path, row['path']))
                 jumpFrame = jumpFrame[fields_to_keep]

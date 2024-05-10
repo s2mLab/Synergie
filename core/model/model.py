@@ -24,6 +24,31 @@ def lstm():
 
     return model
 
+def newmodel():
+
+    model = keras.models.Sequential()
+    model.add(layers.Conv2D(32, kernel_size=(3, 3),
+                activation='relu',
+                input_shape=(400, 9, 1), padding='same'))
+    model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
+    model.add(layers.MaxPooling2D(pool_size=(2, 2)))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Flatten())
+    model.add(layers.Dense(128, activation='relu'))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(32, activation='relu'))
+    model.add(layers.Dropout(0.3))
+    model.add(layers.Dense(16, activation='relu'))
+    model.add(layers.Dropout(0.2))
+    model.add(layers.Dense(2, activation='relu'))
+
+    optimizer = keras.optimizers.Adam(learning_rate=0.000001)
+
+    model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+
+    return model
 
 #
 def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
