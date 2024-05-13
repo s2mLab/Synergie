@@ -32,8 +32,9 @@ db = SQL("sqlite:///database/database.db")
                 jump_id INTEGER NOT NULL,
                 training_id INTEGER NOT NULL,
                 jump_type INTEGER NOT NULL,
+                jump_rotations FLOAT NOT NULL,
                 jump_success BOOLEAN NOT NULL,
-                jump_time INTEGER nOT NULL,
+                jump_time INTEGER NOT NULL,
                 CONSTRAINT jump_id PRIMARY KEY (jump_id)
                 FOREIGN KEY(training_id) REFERENCES training(training_id) ON DELETE CASCADE
 );"""

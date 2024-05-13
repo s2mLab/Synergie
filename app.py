@@ -44,7 +44,12 @@ class App:
         for iter,row in df.iterrows():
             jump_time_min, jump_time_sec = row["videoTimeStamp"].split(":")
             jump_time = int(jump_time_min)*60 + int(jump_time_sec)
-            jump_data = JumpData(0, training_id, int(row["type"]), bool(row["success"]), jump_time)
+            val_rot = float(row["rotations"])
+            if row["type"] != 5:
+                val_rot = np.ceil(val_rot)
+            else:
+                val_rot = np.ceil(val_rot-0.5)+0.5
+            jump_data = JumpData(0, training_id, int(row["type"]), val_rot, bool(row["success"]), jump_time)
             self.db_manager.save_jump_data(jump_data)
 
 

@@ -21,7 +21,7 @@ def save_training_session(path, db_manager : DatabaseManager):
         for iter,row in df.iterrows():
             jump_time_min, jump_time_sec = row["videoTimeStamp"].split(":")
             jump_time = int(jump_time_min)*60 + int(jump_time_sec)
-            jump_data = JumpData(0, int(unique_training_dict[row["skater_name"]]), int(row["type"]), bool(row["success"]), jump_time)
+            jump_data = JumpData(0, int(unique_training_dict[row["skater_name"]]), int(row["type"]), float(row["rotations"]), bool(row["success"]), jump_time)
             db_manager.save_jump_data(jump_data)
 
 def get_all_skater_training(skater_id : int, db_manager : DatabaseManager):
