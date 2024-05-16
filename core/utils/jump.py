@@ -56,7 +56,7 @@ class Jump:
 
         tps = df_rots['SampleTimeFine'].to_numpy().reshape(1,n)[0]
         tps = tps - tps[0]
-        difftps = np.array(tps[1:]-tps[:-1])/1e6
+        difftps = np.diff(tps)/1e6
         vit = df_rots['Gyr_X'].to_numpy().reshape(1,n)[0][:-1]
         pos = np.nansum(np.array(vit)*np.array(difftps))
         total_rotation_x = np.abs(pos/360)

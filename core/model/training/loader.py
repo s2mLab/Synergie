@@ -74,7 +74,7 @@ class Loader:
         fields_to_keep = constants.fields_to_keep
 
         for index, row in mainFrame.iterrows():
-            if row["type"] != 8:
+            if row["success"] != 2:
                 # print(row)
                 jumpFrame = pd.read_csv(os.path.join(folder_path, row['path']))
                 jumpFrame = jumpFrame[fields_to_keep]
@@ -90,7 +90,7 @@ class Loader:
                 labelssuccess.append(row['success'])
 
         jumps = np.array(jumps)
-
+        print(labelssuccess)
         # label one hot encoding
         labelEncoder = LabelEncoder()
         labelstype = np.eye(len(set(labelstype)))[labelEncoder.fit_transform(labelstype)]
