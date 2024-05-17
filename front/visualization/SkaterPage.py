@@ -10,7 +10,7 @@ class SkaterPage:
         self.skaters = self.db_manager.get_all_skaters()
         self.frame = tk.Frame()
         tk.Label(self.frame, text='Page 1').grid(row=2, column=10)
-        tk.Button(self.frame, text='Go to Main Page',
+        tk.Button(self.frame, text='Return',
                   command=self.return_main_page).grid(row=2, column=10)
         
     def create_page(self, main) -> None:
@@ -38,4 +38,4 @@ class SkaterButton:
     def change_page(self, frame, skater_id : int) -> None:
         frame.grid_forget()
         trainings = self.db_manager.load_skater_data(skater_id)
-        TrainingPage(trainings, self.db_manager).create_page(frame)
+        TrainingPage(trainings, skater_id, self.db_manager).create_page(frame)

@@ -9,6 +9,8 @@ class MainPage:
     def __init__(self, db_manager : DatabaseManager, root=None) -> None:
         self.db_manager = db_manager
         self.root = root
+        self.root.grid_columnconfigure(0, weight=1)
+        self.root.grid_rowconfigure(0, weight=1)
         self.frame = tk.Frame(self.root)
         self.frame.grid()
         tk.Label(self.frame, text='Main page').grid(row=0, column=1)
@@ -18,6 +20,8 @@ class MainPage:
                   command=self.make_visualize_page).grid(row=1, column=2)
 
     def create_page(self) -> None:
+        self.root.grid_columnconfigure(0, weight=1)
+        self.root.grid_rowconfigure(0, weight=1)
         self.frame.grid()
 
     def make_visualize_page(self) -> None:
