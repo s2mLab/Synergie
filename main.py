@@ -2,7 +2,7 @@ import os
 import sys
 
 import constants
-from core.data_treatment.data_generation.exporter import export
+from core.data_treatment.data_generation.exporter import export, old_export
 from core.model import model
 from core.model.training import training
 from core.model.training.loader import Loader
@@ -26,7 +26,7 @@ def main():
         session = constants.sessions[session_name]
         if session is None:
             raise Exception("session not found")
-        export(session["path"], session["sample_time_fine_synchro"])
+        old_export(session["path"], session["sample_time_fine_synchro"])
 
     if "-t" in sys.argv:  # train
         train_name = sys.argv[sys.argv.index("-t") + 1]

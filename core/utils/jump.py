@@ -111,10 +111,13 @@ class Jump:
         end_df = self.end + 100
         timelapse = np.arange(begin_df,end_df)
 
-        takeoff_df = df[begin_df:self.start +50].copy(deep=True)
-        reception_df = df[self.end-50:end_df].copy(deep=True)
-
-        resampled_df = pd.concat([takeoff_df,reception_df])
+        length_min = 100 - (self.end - self.start)
+        if length_min > 0:
+            resampled_df = df[begin_df:end_df+length_min].copy(deep=True)
+        else:
+            takeoff_df = df[begin_df:self.start +50].copy(deep=True)
+            reception_df = df[self.end-50:end_df].copy(deep=True)
+            resampled_df = pd.concat([takeoff_df,reception_df])
 
         return resampled_df
 
