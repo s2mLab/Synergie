@@ -21,14 +21,15 @@ def gather_jumps(df: pd.DataFrame) -> list[Jump]:
     # Find indices where 'X_gyr_second_derivative_crossing' transitions from True to False
     end = np.where(np.diff(df['X_gyr_second_derivative_crossing'].astype(int)) == -1)[0]
 
-    for i in range(len(end)):
-        # remove the first end marks that happens before the first begin mark
-        if end[i] < begin[0]:
-            end = np.delete(end, i)
-            break
+    if len(begin) > 0 and len(end) > 0:
+        for i in range(len(end)):
+            # remove the first end marks that happens before the first begin mark
+            if end[i] < begin[0]:
+                end = np.delete(end, i)
+                break
 
-    for i in range(len(begin)):
-        jumps.append(Jump(begin[i], end[i], df))
+        for i in range(len(begin)):
+            jumps.append(Jump(begin[i], end[i], df))
 
     return jumps
 

@@ -18,7 +18,7 @@ class StatsPage:
 
     def return_training_page(self) -> None:
         self.frame.grid_forget()
-        self.main.grid()
+        self.main.grid(sticky="we")
 
     def create_table(self) -> None:
         

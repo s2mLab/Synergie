@@ -6,7 +6,6 @@ from datetime import datetime
 
 from core.database.DatabaseManager import JumpData
 
-
 class TimelineTraining(tk.Frame):
     """
     Timeline widget
@@ -51,7 +50,7 @@ class TimelineTraining(tk.Frame):
 
         self.buttons = {}
         for i,jump in enumerate(jumps):
-            index = f"{jump.jump_time//60}:{jump.jump_time%60}"
+            index = jump.jump_time
             label = tk.Label(self.inner_frame, text=index, anchor="w", background=bg)
             if jump.jump_success:
                 back = "green"

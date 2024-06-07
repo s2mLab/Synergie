@@ -53,8 +53,9 @@ class TimelineSkater(tk.Frame):
         years_showed = []
         months_showed = []
         for i,training in enumerate(trainings):
-            year = training.training_date.year
-            month = training.training_date.strftime("%b")
+            date = datetime.fromtimestamp(training.training_date)
+            year = date.year
+            month = date.strftime("%b")
             if not (year in years_showed and month in months_showed):
                 month_label = tk.Label(
                     self.inner_frame, text= f"{month} {year}", background=bg, anchor="w"
@@ -62,7 +63,7 @@ class TimelineSkater(tk.Frame):
                 month_label.grid(row=0, column=i, sticky="ew")
             years_showed.append(year)
             months_showed.append(month)
-            day = training.training_date.day
+            day = date.day
             if day == 1:
                 day = f"{day}st"
             elif day == 2:
@@ -71,8 +72,8 @@ class TimelineSkater(tk.Frame):
                 day = f"{day}rd"
             else:
                 day = f"{day}th"
-            hour = training.training_date.hour
-            minute = training.training_date.minute
+            hour = date.hour
+            minute = date.minute
             label = tk.Label(self.inner_frame, text=f"{day} {hour}:{minute}", anchor="w", background=bg)
             button = tk.Label(
                 self.inner_frame,

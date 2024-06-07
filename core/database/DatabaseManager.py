@@ -1,6 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials
-from firebase_admin import db
+from firebase_admin import db, firestore
+import firebase_admin.firestore
 import numpy as np
 
 from dataclasses import dataclass
@@ -15,127 +16,88 @@ class JumpData:
     jump_success : bool
     jump_time : int
 
+    def to_dict(self):
+        return {"training_id" : self.training_id,
+         "jump_type" : self.jump_type,
+         "jump_rotations" : self.jump_rotations,
+         "jump_success" : self.jump_success,
+         "jump_time" : self.jump_time}
+
 @dataclass
 class TrainingData:
     training_id : int
     skater_id : int
     training_date : datetime
+    dot_id : str
+
+    def to_dict(self):
+        return {"skater_id" : self.skater_id,
+         "training_date" : self.training_date,
+         "dot_id" : self.dot_id}
 
 @dataclass
 class SkaterData:
     skater_id : int
     skater_name : str
 
+    def to_dict(self):
+        return {"skater_name" : self.skater_name}
+
 class DatabaseManager:
     def __init__(self):
         cred = credentials.Certificate('s2m-skating-firebase-adminsdk-3ofmb-8552d58146.json')
-        firebase_admin.initialize_app(cred, {
-            'databaseURL': 'https://s2m-skating-default-rtdb.firebaseio.com/'
-        }
-        )
-
-        self.ref = db.reference('/')
+        firebase_admin.initialize_app(cred)
+        self.db = firestore.client()
 
     def save_skater_data(self, data : SkaterData) -> int:
-        if self.ref.child("Skater").get() is None:
-            newKey = self.ref.child("Skater").push().key
-            self.ref.child("Skater").update({newKey:
-                {"skater_id" : 1,
-                "skater_name" : data.skater_name}
-            })
-        else:
-            newId = self.ref.child("Skater").order_by_key().get().popitem()[1].get("skater_id")+1
-            newKey = self.ref.child("Skater").push().key
-            self.ref.child("Skater").update({newKey : 
-                {"skater_id" : newId,
-                "skater_name" : data.skater_name}
-            }) 
-        new_id = self.ref.child("Skater").order_by_key().get().popitem()[1].get("skater_id")
-        return new_id
+        add_time, new_ref = self.db.collection("skaters").add(data.to_dict())
+        return new_ref.id
     
     def save_training_data(self, data : TrainingData) -> int:
-        if self.ref.child("Training").get() is None:
-            newKey = self.ref.child("Training").push().key
-            self.ref.child("Training").update({newKey :
-                {"training_id" : 1,
-                "skater_id" : data.skater_id,
-                "training_date" : data.training_date.isoformat(sep=' ', timespec='minutes')}
-            })
-        else:
-            newId = self.ref.child("Training").order_by_key().get().popitem()[1].get("training_id")+1
-            newKey = self.ref.child("Training").push().key
-            self.ref.child("Training").update({newKey :
-                {"training_id" : newId,
-                "skater_id" : data.skater_id,
-                "training_date" : data.training_date.isoformat(sep=' ', timespec='minutes')}
-            }) 
-        new_id = self.ref.child("Training").order_by_key().get().popitem()[1].get("training_id")
-        return new_id
+        add_time, new_ref = self.db.collection("trainings").add(data.to_dict())
+        return new_ref.id
     
     def save_jump_data(self, data : JumpData) -> int:
-        if self.ref.child("Jump").get() is None:
-            newKey = self.ref.child("Jump").push().key
-            self.ref.child("Jump").update({newKey :
-                {"jump_id" : 1,
-                "training_id" : data.training_id,
-                "jump_type" : data.jump_type,
-                "jump_rotations" : data.jump_rotations,
-                "jump_success" : data.jump_success,
-                "jump_time" : data.jump_time}
-            })
-        else:
-            newId = self.ref.child("Jump").order_by_key().get().popitem()[1].get("jump_id")+1
-            newKey = self.ref.child("Jump").push().key
-            self.ref.child("Jump").update({newKey :
-                {"jump_id" : newId,
-                "training_id" : data.training_id,
-                "jump_type" : data.jump_type,
-                "jump_rotations" : data.jump_rotations,
-                "jump_success" : data.jump_success,
-                "jump_time" : data.jump_time}
-            }) 
-        new_id = self.ref.child("Jump").order_by_key().get().popitem()[1].get("jump_id")
-        return new_id
+        add_time, new_ref = self.db.collection("jumps").add(data.to_dict())
+        return new_ref.id
 
     def load_skater_data(self, skater_id : int) -> list[TrainingData]:
         data_trainings = []
-        for val in self.ref.child("Training").order_by_key().get().values():
-            if val["skater_id"] == skater_id:
-                data_trainings.append(TrainingData(int(val["training_id"]), int(val["skater_id"]), datetime.strptime(val["training_date"], '%Y-%m-%d %H:%M')))
-        data_trainings = np.array(data_trainings)
+        for training in self.db.collection("trainings").where(filter=firestore.firestore.FieldFilter("skater_id", "==", skater_id)).order_by("training_date").stream():
+            data_trainings.append(TrainingData(training.id, training.get("skater_id"), training.get("training_date"), 0))
         return data_trainings
 
     def load_training_data(self, training_id : int) -> list[JumpData]:
         data_jumps = []
-        for val in self.ref.child("Jump").order_by_key().get().values():
-            if val["training_id"] == training_id:
-                data_jumps.append(JumpData(int(val["jump_id"]), int(val["training_id"]), int(val["jump_type"]), float(val["jump_rotations"]), bool(val["jump_success"]), int(val["jump_time"])))
-        data_jumps = np.array(data_jumps)
+        for jump in self.db.collection("jumps").where(filter=firestore.firestore.FieldFilter("training_id", "==", training_id)).order_by("jump_time").stream():
+            data_jumps.append(JumpData(jump.id, jump.get("training_id"), jump.get("jump_type"), jump.get("jump_rotations"), jump.get("jump_success"), jump.get("jump_time")))
         return data_jumps
     
     def get_skater_from_training(self, training_id : int) -> int:
-        name = []
-        for val in self.ref.child("Training").order_by_key().get().values():
-            if val["training_id"] == training_id:
-                name.append(val)
-        return int(name[0]["skater_id"])
+        skater_id = self.db.collection("trainings").document(training_id).get().get("skater_id")
+        return int(skater_id)
 
-    def get_skater_name_from_id(self, skater_id : int) -> str:
-        name = []
-        for val in self.ref.child("Skater").order_by_key().get().values():
-            if val["skater_id"] == skater_id:
-                name.append(val)
-        return name[0]["skater_name"]
+    def get_skater_name_from_id(self, skater_id : str) -> str:
+        skater_name = self.db.collection("skaters").document(skater_id).get().get("skater_name")
+        return skater_name
+
+    def get_skater_id_from_name(self, skater_name : str) -> str:
+        skater_id  = self.db.collection("skaters").where(filter=firestore.firestore.FieldFilter("skater_name", "==", skater_name)).get()
+        return skater_id
     
     def get_all_skaters(self) -> list[SkaterData]:
         data_skaters = []
-        for val in self.ref.child("Skater").order_by_key().get().values():
-            data_skaters.append(SkaterData(int(val["skater_id"]), val["skater_name"]))
+        for skater in self.db.collection("skaters").stream():
+            data_skaters.append(SkaterData(skater.id, skater.get("skater_name")))
         return data_skaters
     
     def delete_skater_data(self, skater_id : int) -> None:
-        deleted_key = 0
-        for key, val in self.ref.child("Skater").order_by_key().get().items():
-            if int(val["skater_id"]) == int(skater_id):
-                deleted_key = key
-        self.ref.child(f"Skater/{deleted_key}").delete()
+        self.db.collection("skaters").document(skater_id).delete()
+
+    def find_training(self, date, device_id):
+        trainings = self.db.collection("trainings").where(filter=firestore.firestore.FieldFilter("training_date", "==", date)).where(filter=firestore.firestore.FieldFilter("dot_id", "==", device_id)).get()
+        return trainings
+    
+    def set_training_date(self, training_id, date) -> None:
+        self.db.collection("trainings").document(training_id).update({"training_date" : date})
+

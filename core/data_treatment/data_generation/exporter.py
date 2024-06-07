@@ -32,7 +32,7 @@ def export(folder: str, sampleTimeFineSynchro: int = 0) -> int:
 
     jumpList = []
     predict_jump = []
-    skater_name = folder.split("/")[-1].split('_')[0]
+    skater_id = folder.split("/")[-1].split('_')[1]
 
     if folder.endswith(".csv"):
 
@@ -40,7 +40,7 @@ def export(folder: str, sampleTimeFineSynchro: int = 0) -> int:
 
         for jump in session.jumps:
             jump_copy = copy.deepcopy(jump)
-            jump_copy.skater_name = skater_name
+            jump_copy.skater_name = skater_id
             jump_copy.session_name = folder.split('/')[-1]
             jump_copy.df = jump.df.copy(deep=True)
             jumpList.append(jump_copy)
@@ -64,7 +64,7 @@ def export(folder: str, sampleTimeFineSynchro: int = 0) -> int:
     jumpListdf = jumpListdf.sort_values(by=['videoTimeStamp'])
     jumpListdf.to_csv(os.path.join(saving_path, f"{filename}_jumplist.csv"), index=False)
 
-    return (int(skater_name),jumpListdf)
+    return (skater_id,jumpListdf)
 
 def old_export(folder_name: str, sampleTimeFineSynchro: int = 0):
     """
