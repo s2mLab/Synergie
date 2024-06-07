@@ -48,20 +48,10 @@ class StatsTimelinePage():
 
     def create_table(self) -> tk.Frame:
 
+        
         self.frame.grid_columnconfigure(0, weight=0)
-        self.frame.grid_columnconfigure(1, weight=1)
-        self.frame.grid_columnconfigure(2, weight=1)
-        self.frame.grid_columnconfigure(3, weight=1)
-        self.frame.grid_columnconfigure(4, weight=1)
-        self.frame.grid_columnconfigure(5, weight=1)
-        self.frame.grid_columnconfigure(6, weight=1)
-        self.frame.grid_columnconfigure(7, weight=1)
-        self.frame.grid_columnconfigure(8, weight=1)
-        self.frame.grid_columnconfigure(9, weight=1)
-        self.frame.grid_columnconfigure(10, weight=1)
-        self.frame.grid_columnconfigure(11, weight=1)
-        self.frame.grid_columnconfigure(12, weight=1)
-        self.frame.grid_columnconfigure(13, weight=1)
+        for i in range(1,14):
+            self.frame.grid_columnconfigure(i, weight=1)
 
         tk.Label(self.frame, text="").grid(row=4, column=0)
 
