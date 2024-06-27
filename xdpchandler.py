@@ -30,6 +30,7 @@
 import movelladot_pc_sdk
 from collections import defaultdict
 from threading import Lock
+import numpy as np
 from pynput import keyboard
 from user_settings import *
 import time
@@ -129,6 +130,28 @@ class XdpcHandler(movelladot_pc_sdk.XsDotCallback):
         self.__manager.disableDeviceDetection()
         print("Stopped scanning for devices.")
 
+    def scanOneDots(self, bluetoothAddress):
+        print(bluetoothAddress)
+        print("Scanning for devices...")
+        self.__manager.enableDeviceDetection()
+
+        # Setup the keyboard input listener
+        listener = keyboard.Listener(on_press=on_press)
+        listener.start()
+
+        print("Press any key or wait 5 seconds to stop scanning...")
+        connectedDOTCount = 0
+        startTime = movelladot_pc_sdk.XsTimeStamp_nowMs()
+        while waitForConnections and not set(bluetoothAddress).issubset(np.vectorize(lambda x : x.bluetoothAddress(), otypes=[str])(self.detectedDots())):
+            time.sleep(0.1)
+            nextCount = len(self.detectedDots())
+            if nextCount != connectedDOTCount:
+                print(f"Number of connected DOTs: {nextCount}. Press any key to start.")
+                connectedDOTCount = nextCount
+
+        self.__manager.disableDeviceDetection()
+        print("Stopped scanning for devices.")
+
     def connectDots(self):
         """
         Connects to Movella DOTs found via either USB or Bluetooth connection
@@ -174,6 +197,30 @@ class XdpcHandler(movelladot_pc_sdk.XsDotCallback):
 
                 self.__connectedUsbDots.append(device)
                 print(f"Device: {device.productCode()}, with ID: {device.deviceId().toXsString()} opened.")
+    
+    def connectOneDot(self, bluetoothAddress):
+        for portInfo in self.detectedDots():
+            if portInfo.isBluetooth() and portInfo.bluetoothAddress() in bluetoothAddress:
+                address = portInfo.bluetoothAddress()
+
+                print(f"Opening DOT with address: @ {address}")
+                if not self.__manager.openPort(portInfo):
+                    print(f"Connection to Device {address} failed, retrying...")
+                    print(f"Device {address} retry connected:")
+                    if not self.__manager.openPort(portInfo):
+                        print(f"Could not open DOT. Reason: {self.__manager.lastResultText()}")
+                        continue
+
+                device = self.__manager.device(portInfo.deviceId())
+                if device is None:
+                    continue
+                
+                devicesId = [] 
+                for x in self.__connectedDots:
+                    devicesId.append(x.deviceId())
+                if not device.deviceId() in devicesId:
+                    self.__connectedDots.append(device)
+                    print(f"Found a device with Tag: {device.deviceTagName()} @ address: {address}")
 
     def resetWaitingConnection(self):
         global waitForConnections

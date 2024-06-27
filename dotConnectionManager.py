@@ -1,9 +1,14 @@
 import time
+from typing import List
+
+import numpy as np
+from core.database.DatabaseManager import DatabaseManager, TrainingData
 from xdpchandler import *
 import asyncio
 from winrt.windows.devices import radios
 import threading
-import queue
+
+from movelladot_pc_sdk.movelladot_pc_sdk_py39_64 import XsDotDevice
 
 async def bluetooth_power(turn_on):
     all_radios = await radios.Radio.get_radios_async()
@@ -51,44 +56,46 @@ class DotConnectionManager:
             self.recordHandler.cleanup()
             exit(-1)
 
-    def newStartRecord(self, device):
+    def newStartRecord(self, device : XsDotDevice):
         device.startRecording()
 
-    def startrecord(lastDisconnected):
+    def startrecord(self, lastDisconnected, skater_id, db_manager : DatabaseManager):
         xdpcHandler = XdpcHandler()
         if not xdpcHandler.initialize():
             xdpcHandler.cleanup()
             exit(-1)
-        xdpcHandler.scanForDots()
+        bluetooth_address = db_manager.get_bluetooth_address(lastDisconnected)
+        xdpcHandler.scanOneDots(bluetooth_address)
         while len(xdpcHandler.connectedDots()) != len(xdpcHandler.detectedDots()):
-            xdpcHandler.connectDots()
-        for x in xdpcHandler.connectedDots():
-            print(x.deviceId())
+            xdpcHandler.connectOneDot(bluetooth_address)
         for device in xdpcHandler.connectedDots():
-            print(device.deviceId())
             if str(device.deviceId()) in lastDisconnected:
                 print("Starting onboard recording")
                 device.startRecording()
+                new_training = TrainingData(0, skater_id[0].id, 0, str(device.deviceId()))
+                db_manager.set_current_record(str(device.deviceId()), db_manager.save_training_data(new_training))
             else : 
                 print("Not the correct dot")
         xdpcHandler.cleanup()
         xdpcHandler.resetWaitingConnection()
 
-    def stoprecord(lastConnected):
+    def stoprecord(self, lastConnected : List[XsDotDevice], db_manager : DatabaseManager):
         xdpcHandler = XdpcHandler()
         if not xdpcHandler.initialize():
             xdpcHandler.cleanup()
             exit(-1)
-        xdpcHandler.scanForDots()
+        bluetooth_address = db_manager.get_bluetooth_address(lastConnected)
+        xdpcHandler.scanOneDots(bluetooth_address)
         while len(xdpcHandler.connectedDots()) != len(xdpcHandler.detectedDots()):
-            xdpcHandler.connectDots()
-        for x in xdpcHandler.connectedDots():
-            print(x.deviceId())
+            xdpcHandler.connectOneDot(bluetooth_address)
         for device in xdpcHandler.connectedDots():
             print(device.deviceId())
             if str(device.deviceId()) in lastConnected:
                 print("Stoping onboard recording")
                 device.stopRecording()
+                current_record = db_manager.get_current_record(str(device.deviceId()))
+                db_manager.set_training_date(current_record, device.getRecordingInfo(device.recordingCount()).startUTC())
+                db_manager.set_current_record(str(device.deviceId()), "0")
             else : 
                 print("Not the correct dot")    
         xdpcHandler.cleanup()

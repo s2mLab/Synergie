@@ -1,3 +1,4 @@
+from typing import List
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db, firestore
@@ -101,3 +102,15 @@ class DatabaseManager:
     def set_training_date(self, training_id, date) -> None:
         self.db.collection("trainings").document(training_id).update({"training_date" : date})
 
+    def set_current_record(self, device_id, current_record) -> None:
+        self.db.collection("dots").document(device_id).update({"current_record" : current_record})
+
+    def get_current_record(self, device_id) -> str:
+        return self.db.collection("dots").document(device_id).get().get("current_record")
+    
+    def get_bluetooth_address(self, device_list) -> List[str]:
+        bluetooth_list = []
+        for device in device_list:
+            bluetooth_list.append(self.db.collection("dots").document(device).get().get("bluetooth_address"))
+        return bluetooth_list
+            

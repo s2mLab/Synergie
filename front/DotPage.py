@@ -57,7 +57,6 @@ class DotPage:
 class StartAndStopButton:
     def __init__(self, frame, db_manager : DatabaseManager, device, entry, row : int, column : int) -> None:
         self.db_manager = db_manager
-        self.current_record = 0
         tk.Button(frame, text="Start Recording", command=lambda : self.startRecording(device, entry)).grid(row=row, column=column, padx=5)
         tk.Button(frame, text="Stop Recording", command=lambda : self.stopRecording(device)).grid(row=row+1, column=column, padx=5)
     
@@ -67,13 +66,15 @@ class StartAndStopButton:
             device.startRecording()
             print(f"{device.deviceTagName()} Recording started for {entry.get()}")
             new_training = TrainingData(0, skater_id[0].id, 0, str(device.deviceId()))
-            self.current_record = self.db_manager.save_training_data(new_training)
+            self.db_manager.set_current_record(str(device.deviceId()), self.db_manager.save_training_data(new_training))
         else:
             print("Unknown skater")
     
     def stopRecording(self, device):
         device.stopRecording()
-        self.db_manager.set_training_date(self.current_record, device.getRecordingInfo(device.recordingCount()).startUTC())
+        current_record = self.db_manager.get_current_record(str(device.deviceId()))
+        self.db_manager.set_training_date(current_record, device.getRecordingInfo(device.recordingCount()).startUTC())
+        self.db_manager.set_current_record(str(device.deviceId()), "0")
         
     
     

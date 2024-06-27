@@ -1,3 +1,4 @@
+from queue import Queue
 import time
 import tkinter as tk
 import threading
@@ -6,43 +7,13 @@ import os
 import pandas as pd
 
 from front.DotPage import DotPage
+from front.RecordPage import RecordPage
 from xdpchandler import *
 from core.data_treatment.data_generation.exporter import export
 from core.database.DatabaseManager import *
 from front.DevPage import DevPage
 from front.MainPage import MainPage
 from dotConnectionManager import *
-
-dico_device = {
-    "40195BFB80F60123" : {
-        "tag_name" : "1",
-        "bluetooth_address" : "D4:22:CD:00:76:F7"
-    },
-    "40195BFB80F60069" : {
-        "tag_name" : "3",
-        "bluetooth_address" : "D4:22:CD:00:77:D1"
-    },
-    "40195BFB80F6000F" : {
-        "tag_name" : "4",
-        "bluetooth_address" : "D4:22:CD:00:78:AB"
-    },
-    "40195BFB80F6011A" : {
-        "tag_name" : "5",
-        "bluetooth_address" : "D4:22:CD:00:77:D9"
-    },
-    "40195BF580BA0020" : {
-        "tag_name" : "7",
-        "bluetooth_address" : "D4:22:CD:00:79:70"
-    },
-    "40195BF580BA003E" : {
-        "tag_name" : "8",
-        "bluetooth_address" : "D4:22:CD:00:79:7D"
-    },
-    "40195BF580350082" : {
-        "tag_name" : "10",
-        "bluetooth_address" : "D4:22:CD:00:76:AC"
-    }
-}
 
 class App:
     def __init__(self, master):
@@ -104,21 +75,50 @@ class App:
         while True:
             if not self.bluetoothEvent.is_set():
                 lastConnected = []
+                lastDisconnected = []
                 asyncio.run(bluetooth_power(False))
                 self.xdpcHandler.detectUsbDevices()
                 if len(self.xdpcHandler.detectedDots())-self.val > 0:
                     print("Connected, extracting data")
                     self.xdpcHandler.connectDots()
                     connectedUsb = []
+                    isRecording = False
                     for usb in self.xdpcHandler.connectedUsbDots():
-                        if not str(usb.deviceId()) in self.usbDevices and usb.recordingCount()>0:
+                        if not str(usb.deviceId()) in self.usbDevices and usb.recordingCount() != 0:
                             lastConnected.append(usb)
                         connectedUsb.append(str(usb.deviceId()))
+                        isRecording += (usb.recordingCount()==-1)
                     self.usbDevices = connectedUsb
                     if len(lastConnected) > 0:
+                        if isRecording:
+                            asyncio.run(bluetooth_power(True))
+                            self.dot_connection_manager.stoprecord(np.vectorize(lambda x : str(x.deviceId()), otypes=[str])(lastConnected), self.db_manager)
+                            asyncio.run(bluetooth_power(False))
                         self.export_data(lastConnected)
                     else : 
-                        print("No available dots for data extraction, all are empty or recording")
+                        print("No available dots for data extraction, all are empty")
+                elif len(self.xdpcHandler.detectedDots())-self.val < 0:
+                    print("Disconnected dot")
+                    self.xdpcHandler.connectDots()
+                    connectedUsb = []
+                    for usb in self.xdpcHandler.connectedUsbDots():
+                        connectedUsb.append(str(usb.deviceId()))
+                    for usb in self.usbDevices:
+                        if not usb in connectedUsb:
+                            lastDisconnected.append(usb)
+                    self.usbDevices = connectedUsb
+                    infoqueue = Queue()
+                    RecordPage(self.db_manager, infoqueue).createPage()
+                    name = infoqueue.get()
+                    skater_id = self.db_manager.get_skater_id_from_name(name)
+                    if len(skater_id) > 0:
+                        asyncio.run(bluetooth_power(True))
+                        time.sleep(1)
+                        self.dot_connection_manager.startrecord(lastDisconnected, skater_id, self.db_manager)
+                        asyncio.run(bluetooth_power(False))
+                    else:
+                        print("Unknown skater")
+                self.val = len(self.xdpcHandler.detectedDots())
                 self.xdpcHandler.resetConnectedDots()
                 self.xdpcHandler.cleanup()
             time.sleep(1)
@@ -169,6 +169,7 @@ class App:
                     new_name  = f"data/new/{csvFilename.split('/')[-1]}"
                     new_df.to_csv(new_name,index=True, index_label="PacketCounter")
             device.eraseFlash()
+            print("You can disconnect the dot")
         self.xdpcHandler.cleanup()  
 
 root = tk.Tk()
