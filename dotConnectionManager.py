@@ -1,24 +1,28 @@
 import time
 from typing import List
-
+import os
 import numpy as np
 from core.database.DatabaseManager import DatabaseManager, TrainingData
 from xdpchandler import *
 import asyncio
-from winrt.windows.devices import radios
+if os.name == 'nt':
+    from winrt.windows.devices import radios
 import threading
 
 from movelladot_pc_sdk.movelladot_pc_sdk_py39_64 import XsDotDevice
 
 async def bluetooth_power(turn_on):
-    all_radios = await radios.Radio.get_radios_async()
-    for this_radio in all_radios:
-        if this_radio.kind == radios.RadioKind.BLUETOOTH:
-            if turn_on:
-                result = await this_radio.set_state_async(radios.RadioState.ON)
-            else:
-                result = await this_radio.set_state_async(radios.RadioState.OFF)
-
+    if os.name == 'nt':
+        all_radios = await radios.Radio.get_radios_async()
+        for this_radio in all_radios:
+            if this_radio.kind == radios.RadioKind.BLUETOOTH:
+                if turn_on:
+                    result = await this_radio.set_state_async(radios.RadioState.ON)
+                else:
+                    result = await this_radio.set_state_async(radios.RadioState.OFF)
+    else :
+        pass
+    
 class DotConnectionManager:
     def __init__(self):
         self.xdpcHandler = XdpcHandler()
