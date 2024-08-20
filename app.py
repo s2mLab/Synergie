@@ -1,178 +1,94 @@
-from queue import Queue
 import time
-import tkinter as tk
+from PIL import Image, ImageTk
+import ttkbootstrap as ttkb
+from tkinter import messagebox
 import threading
-import os
 
-import pandas as pd
-
-from front.DotPage import DotPage
-from front.RecordPage import RecordPage
-from xdpchandler import *
+from front.ConnectionPage import ConnectionPage
 from core.data_treatment.data_generation.exporter import export
 from core.database.DatabaseManager import *
-from front.DevPage import DevPage
+from core.utils.DotManager import DotManager
+from front.StartingPage import StartingPage
+from front.StopingPage import StopingPage
 from front.MainPage import MainPage
-from dotConnectionManager import *
 
 class App:
-    def __init__(self, master):
+
+    def __init__(self, root : ttkb.Window):
         self.db_manager = DatabaseManager()
-        self.bluetoothEvent = threading.Event()
-        MainPage(self.db_manager, self.bluetoothEvent, master)
-        self.dot_connection_manager = DotConnectionManager()
-        self.dico_device = {}
+        self.dot_manager = DotManager(self.db_manager)
+        self.root = root
 
-        #DevPage(master)
-        detection_thread = threading.Thread(target=self.detectDots, args=())
-        detection_thread.daemon = True
-        detection_thread.start()
+        self.connectionPage = ConnectionPage(self.root, self.db_manager)
+        self.checkConnection()
 
-        treatment_thread = threading.Thread(target=self.run, args=())
-        treatment_thread.daemon = True
-        treatment_thread.start()
+    def checkConnection(self):
+        if self.connectionPage.userConnected != "":
+            self.userConnected = self.connectionPage.userConnected
+            self.connectionPage.frame.destroy()
+            self.root.update()
+            self.launchMainPage()
+        else:
+            self.root.after(100, self.checkConnection)
 
-    def run(self):
-        while True :
-            list_file = os.listdir("data/new/")
-            if len(list_file)>0:
-                file = os.path.join("data/new/", list_file[0])
-                new_file = os.path.join("data/processing/", list_file[0])
-                os.replace(file, new_file)
-                print("Processing")
-                event = threading.Event()
-                process_thread = threading.Thread(target=self.export_file, args=(new_file, event))
-                process_thread.daemon = True
-                process_thread.start()
-                event.wait()
-            time.sleep(1)
+    def launchMainPage(self):
+        self.mainPage = MainPage([], self.dot_manager, self.db_manager, self.root)
+        self.initialEvent = threading.Event()
+        threading.Thread(target=self.initialize, args=([self.initialEvent]), daemon=True).start()
+        self.checkInit()
     
-    def export_file(self, path, event : threading.Event):
-        skater_id, df = export(path)
-        print("End of process")
-        os.remove(path)
-        training_id = path.split("/")[-1].split("_")[0]
-        for iter,row in df.iterrows():
-            jump_time_min, jump_time_sec = row["videoTimeStamp"].split(":")
-            jump_time = '{:02d}:{:02d}'.format(int(jump_time_min), int(jump_time_sec))
-            val_rot = float(row["rotations"])
-            if row["type"] != 5:
-                val_rot = np.ceil(val_rot)
-            else:
-                val_rot = np.ceil(val_rot-0.5)+0.5
-            jump_data = JumpData(0, training_id, int(row["type"]), val_rot, bool(row["success"]), jump_time)
-            self.db_manager.save_jump_data(jump_data)
-        event.set()
+    def checkInit(self):
+        if self.initialEvent.is_set():
+            self.mainPage.dotsConnected = self.dot_manager.getDevices()
+            self.mainPage.make_dot_page()
+            self.initialEvent.clear()
+        else:
+            self.root.after(100, self.checkInit)
 
-    def detectDots(self):
-        self.xdpcHandler = XdpcHandler()
-        self.usbDevices = []
+    def initialize(self, initialEvent : threading.Event):
+        (check, unconnectedDevice) = self.dot_manager.firstConnection()
+        while not check:
+            deviceMessage = f"{unconnectedDevice[0]}"
+            for deviceTag in unconnectedDevice[1:]:
+                deviceMessage = deviceMessage + " ," + deviceTag 
+            messagebox.askretrycancel("Connection", f"Please reconnect sensor {deviceMessage}")
+            (check, unconnectedDevice) = self.dot_manager.firstConnection()
 
-        if not self.xdpcHandler.initialize():
-            self.xdpcHandler.cleanup()
-            exit(-1)
-        self.val = 0
+        initialEvent.set()
+
+        usb_detection_thread = threading.Thread(target=self.checkUsbDots, args=([self.startStopping, self.startStarting]))
+        usb_detection_thread.daemon = True
+        usb_detection_thread.start()
+
+    def checkUsbDots(self, callbackStop, callbackStart):
         while True:
-            if not self.bluetoothEvent.is_set():
-                lastConnected = []
-                lastDisconnected = []
-                asyncio.run(bluetooth_power(False))
-                self.xdpcHandler.detectUsbDevices()
-                if len(self.xdpcHandler.detectedDots())-self.val > 0:
-                    print("Connected, extracting data")
-                    self.xdpcHandler.connectDots()
-                    connectedUsb = []
-                    isRecording = False
-                    for usb in self.xdpcHandler.connectedUsbDots():
-                        if not str(usb.deviceId()) in self.usbDevices and usb.recordingCount() != 0:
-                            lastConnected.append(usb)
-                        connectedUsb.append(str(usb.deviceId()))
-                        isRecording += (usb.recordingCount()==-1)
-                    self.usbDevices = connectedUsb
-                    if len(lastConnected) > 0:
-                        if isRecording:
-                            asyncio.run(bluetooth_power(True))
-                            self.dot_connection_manager.stoprecord(np.vectorize(lambda x : str(x.deviceId()), otypes=[str])(lastConnected), self.db_manager)
-                            asyncio.run(bluetooth_power(False))
-                        self.export_data(lastConnected)
-                    else : 
-                        print("No available dots for data extraction, all are empty")
-                elif len(self.xdpcHandler.detectedDots())-self.val < 0:
-                    print("Disconnected dot")
-                    self.xdpcHandler.connectDots()
-                    connectedUsb = []
-                    for usb in self.xdpcHandler.connectedUsbDots():
-                        connectedUsb.append(str(usb.deviceId()))
-                    for usb in self.usbDevices:
-                        if not usb in connectedUsb:
-                            lastDisconnected.append(usb)
-                    self.usbDevices = connectedUsb
-                    infoqueue = Queue()
-                    RecordPage(self.db_manager, infoqueue).createPage()
-                    name = infoqueue.get()
-                    skater_id = self.db_manager.get_skater_id_from_name(name)
-                    if len(skater_id) > 0:
-                        asyncio.run(bluetooth_power(True))
-                        time.sleep(1)
-                        self.dot_connection_manager.startrecord(lastDisconnected, skater_id, self.db_manager)
-                        asyncio.run(bluetooth_power(False))
-                    else:
-                        print("Unknown skater")
-                self.val = len(self.xdpcHandler.detectedDots())
-                self.xdpcHandler.resetConnectedDots()
-                self.xdpcHandler.cleanup()
-            time.sleep(1)
+            checkUsb = self.dot_manager.checkDevices()
+            lastConnected = checkUsb[0]
+            lastDisconnected = checkUsb[1]
+            if lastConnected:
+                print("Connection")
+                for device in lastConnected:
+                    if device.isRecording or device.recordingCount > 0 :
+                        callbackStop(device)
+            if lastDisconnected:
+                print("Deconnection")
+                for device in lastDisconnected:
+                    if not device.isRecording:
+                        callbackStart(device)
+            time.sleep(0.2)
+
+    def startStopping(self, device):
+        StopingPage(device, self.db_manager)
     
-    def export_data(self, lastConnected):
-        exportData = movelladot_pc_sdk.XsIntArray()
-        exportData.push_back(movelladot_pc_sdk.RecordingData_Timestamp)
-        exportData.push_back(movelladot_pc_sdk.RecordingData_Euler)
-        exportData.push_back(movelladot_pc_sdk.RecordingData_Acceleration)
-        exportData.push_back(movelladot_pc_sdk.RecordingData_AngularVelocity)
+    def startStarting(self, device):
+        StartingPage(device, self.db_manager, self.userConnected)
 
-        for device in lastConnected:
-            for recordingIndex in range(1, device.recordingCount()+1):
-                recInfo = device.getRecordingInfo(recordingIndex)
-                if recInfo.empty():
-                    print(f'Could not get recording info. Reason: {device.lastResultText()}')
-
-                dateRecord = recInfo.startUTC()
-                trainings = self.db_manager.find_training(dateRecord, str(device.deviceId()))
-                if len(trainings) > 0:
-                    training = trainings[0]
-                    csvFilename = f"data/raw/{training.id}_{training.get('skater_id')}_{dateRecord}.csv"
-
-                    if not device.selectExportData(exportData):
-                        print(f'Could not select export data. Reason: {device.lastResultText()}')
-                    elif not device.enableLogging(csvFilename):
-                        print(f'Could not open logfile for data export. Reason: {device.lastResultText()}')
-                    elif not device.startExportRecording(recordingIndex):
-                        print(f'Could not export recording. Reason: {device.lastResultText()}')
-                    else:
-                        # Sleeping for max 10 seconds...
-                        startTime = movelladot_pc_sdk.XsTimeStamp_nowMs()
-                        while not self.xdpcHandler.exportDone() and movelladot_pc_sdk.XsTimeStamp_nowMs() - startTime <= 10000:
-                            time.sleep(0.1)
-
-                        if self.xdpcHandler.exportDone():
-                            print('File export finished!')
-                        else:
-                            print('Done sleeping, aborting export for demonstration purposes.')
-                            if not device.stopExportRecording():
-                                print(f'Device stop export failed. Reason: {device.lastResultText()}')
-                            else:
-                                print('Device export stopped')
-
-                    device.disableLogging()
-                    df = pd.read_csv(f"{csvFilename}")
-                    new_df = df[["SampleTimeFine","Euler_X","Euler_Y","Euler_Z","Acc_X","Acc_Y","Acc_Z","Gyr_X","Gyr_Y","Gyr_Z"]]
-                    new_name  = f"data/new/{csvFilename.split('/')[-1]}"
-                    new_df.to_csv(new_name,index=True, index_label="PacketCounter")
-            device.eraseFlash()
-            print("You can disconnect the dot")
-        self.xdpcHandler.cleanup()  
-
-root = tk.Tk()
+root = ttkb.Window(title="Synergie", themename="minty")
 myapp = App(root)
-root.geometry("1000x400")
+width = root.winfo_screenwidth()
+height = root.winfo_screenheight()
+root.geometry("%dx%d" % (width, height))
+ico = Image.open('img/Logo_s2mJUMP_RGB.png')
+photo = ImageTk.PhotoImage(ico)
+root.wm_iconphoto(False, photo)
 root.mainloop()

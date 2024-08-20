@@ -4,21 +4,17 @@ from keras import layers
 def lstm():
     model = keras.models.Sequential()
     model.add(keras.layers.LSTM(128, input_shape=(
-    400, 9)))  # , return_sequences=True)) # considering the length of the arrays is going to be the same
+    180, 10)))  # , return_sequences=True)) # considering the length of the arrays is going to be the same
 
     model.add(keras.layers.Dropout(0.4))
     model.add(keras.layers.Dense(64, activation='relu'))
-    model.add(keras.layers.Dropout(0.2))
-    model.add(keras.layers.Dense(48, activation='relu'))
-    model.add(keras.layers.Dropout(0.2))
-    model.add(keras.layers.Dense(32, activation='relu'))
-    model.add(keras.layers.Dropout(0.2))
+    model.add(keras.layers.Dropout(0.5))
     model.add(keras.layers.Dense(16, activation='relu'))
     model.add(keras.layers.Dropout(0.2))
     # softmax
     model.add(keras.layers.Dense(2, activation='relu'))
 
-    optimizer = keras.optimizers.Adam(learning_rate=0.000001)
+    optimizer = keras.optimizers.Adam(learning_rate=0.00001)
 
     model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
@@ -61,7 +57,7 @@ def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0):
 
 
 def transformer(
-        input_shape=(400, 9),
+        input_shape=(240, 10),
         head_size=256,
         num_heads=4,
         ff_dim=4,

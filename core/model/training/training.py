@@ -29,17 +29,8 @@ class Trainer:
     def model_load_best(self, path):
         return keras.models.load_model(path)
 
-    def plot(self, trainin, path):
+    def plot(self, path):
         self.plot_confusion_matrix(path)
-        """ plt.plot(trainin.history['loss'], label='training loss')
-        plt.plot(trainin.history['val_loss'], label='val loss')
-        plt.legend()
-        plt.show()
-
-        plt.plot(trainin.history['accuracy'], label='training accuracy')
-        plt.plot(trainin.history['val_accuracy'], label='val accuracy')
-        plt.legend()
-        plt.show() """
 
     def plot_confusion_matrix(self, path):
         model = self.model_load_best(path)
@@ -53,33 +44,6 @@ class Trainer:
             y_true.append(np.argmax(x))
         results = confusion_matrix(y_true, y_pred2)
         print(results)
-
-        """ n = len(self.dataset.labels_test[0])
-
-        labelled_rows = [constants.jumpType(i).name for i in range(n)]
-
-        df_cm = pd.DataFrame(results)
-        # plt.figure(figsize=(10,7))
-        sn.set(font_scale=0.9)  # for label size
-        sn.heatmap(df_cm, annot=True, annot_kws={"size": 16})  # font size
-
-        plt.show() """
-
-        """ TP = np.diag(results)
-
-        FP = np.sum(results, axis=0) - TP
-
-        FN = np.sum(results, axis=1) - TP
-
-        # display sensitivity and specificity global and for each class
-
-        print("sensitivity: ", TP / (TP + FN))
-
-        print("specificity: ", TP / (TP + FP))
-
-        for i in range(n):
-            print(
-                f"{constants.jumpType(i).name}: sensitivity: {TP[i] / (TP[i] + FN[i])}, specificity: {TP[i] / (TP[i] + FP[i])}") """
 
     def train(self, epochs: int = 100, plot: bool = True):
         """
@@ -102,8 +66,8 @@ class Trainer:
                 callbacks=[self.model_save_best(self.model_filepath)],
             )
         except KeyboardInterrupt:
-            self.plot(trainin, self.model_filepath)
+            self.plot(self.model_filepath)
 
         if plot:
             self.model = core.model.model.load_model(self.model_filepath)
-            self.plot(trainin,self.model_filepath)
+            self.plot(self.model_filepath)
