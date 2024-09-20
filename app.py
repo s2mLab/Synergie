@@ -51,7 +51,7 @@ class App:
             deviceMessage = f"{unconnectedDevice[0]}"
             for deviceTag in unconnectedDevice[1:]:
                 deviceMessage = deviceMessage + " ," + deviceTag 
-            messagebox.askretrycancel("Connection", f"Please reconnect sensor {deviceMessage}")
+            messagebox.askretrycancel("Connexion", f"Veuillez reconnecter les capteurs {deviceMessage}")
             (check, unconnectedDevice) = self.dot_manager.firstConnection()
 
         initialEvent.set()
@@ -66,12 +66,12 @@ class App:
             lastConnected = checkUsb[0]
             lastDisconnected = checkUsb[1]
             if lastConnected:
-                print("Connection")
+                print("Connexion")
                 for device in lastConnected:
                     if device.isRecording or device.recordingCount > 0 :
                         callbackStop(device)
             if lastDisconnected:
-                print("Deconnection")
+                print("Deconnexion")
                 for device in lastDisconnected:
                     if not device.isRecording:
                         callbackStart(device)
@@ -88,7 +88,10 @@ myapp = App(root)
 width = root.winfo_screenwidth()
 height = root.winfo_screenheight()
 root.geometry("%dx%d" % (width, height))
-ico = Image.open('img/Logo_s2mJUMP_RGB.png')
+try :
+    ico = Image.open(f'{sys._MEIPASS}/img/Logo_s2mJUMP_RGB.png')
+except:
+    ico = Image.open(f'img/Logo_s2mJUMP_RGB.png')
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
 root.mainloop()

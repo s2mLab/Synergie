@@ -64,7 +64,7 @@ def main():
         elif train_name == "success":
             dataset = Loader(path).get_success_data()
             trainer = training.Trainer(dataset, model.lstm(), constants.modelsuccess_filepath)
-            trainer.train(epochs=20)
+            trainer.train_success(epochs=20)
 
     if "-test" in sys.argv:  # test
         session_name = sys.argv[sys.argv.index("-test") + 1]

@@ -1,3 +1,4 @@
+from tkinter.font import BOLD, Font
 import ttkbootstrap as ttkb
 from core.database.DatabaseManager import DatabaseManager
 
@@ -14,15 +15,18 @@ class ConnectionPage:
         self.frame.grid_rowconfigure(2, weight=1)
         self.frame.grid_rowconfigure(3, weight=1)
         self.frame.grid_columnconfigure(0, weight=1)
-        self.label = ttkb.Label(self.frame, text="Please enter your email")
+        labelFont = Font(self.root, size=15, weight=BOLD)
+        self.label = ttkb.Label(self.frame, text="Veuillez entrer votre adresse mail", font=labelFont)
         self.label.grid(row=0, column=0, sticky="s")
         self.accountVar = ttkb.StringVar(self.frame, value="")
         self.entry = ttkb.Entry(self.frame, textvariable=self.accountVar)
         self.entry.grid(row=1, column=0)
-        self.button = ttkb.Button(self.frame, text="Register", command=self.register)
+        buttonStyle = ttkb.Style()
+        buttonStyle.configure('home.TButton', font=Font(self.frame, size=20, weight=BOLD))
+        self.button = ttkb.Button(self.frame, text="Se connecter", style="home.TButton", command=self.register)
         self.button.grid(row=2, column=0, sticky="n")
         self.errorVar = ttkb.StringVar(self.frame, value="")
-        self.errorLabel = ttkb.Label(self.frame, textvariable=self.errorVar)
+        self.errorLabel = ttkb.Label(self.frame, textvariable=self.errorVar, font=labelFont)
         self.errorLabel.grid(row=3, column=0)
         self.frame.grid(sticky="nswe")
     
@@ -31,9 +35,9 @@ class ConnectionPage:
         if userFound != []:
             x = userFound[0]
             if x.get("role") == "COACH":
-                print("Connected")
+                print("Connecté")
                 self.userConnected = x.id
             else:
-                self.errorVar.set("Error : you need a coach account")
+                self.errorVar.set("Erreur : vous avez besoin d'un compte entraîneur")
         else:
-            self.errorVar.set("Error : this user doesn't exist")
+            self.errorVar.set("Erreur : cet utilisateur n'existe pas")

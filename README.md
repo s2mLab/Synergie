@@ -1,6 +1,7 @@
 # AIOnIce
 
 A figure skating jump recognition software using IMU data as input. 
+Une application de reconnaissance des figures de patinage artistique utilisant les données de capteurs IMU
 
 CLI usage: 
 
@@ -8,43 +9,47 @@ CLI usage:
 pip install requirements.txt
 ```
 
-You also need to get the movelladot-pc-sdk : check (https://www.movella.com/support/software-documentation)
+Vous aurez aussi besoin du movelladot_pc_sdk : (https://www.movella.com/support/software-documentation)
 
-## App
+## Application
 
-An app with a visual interface is available, you can launch it with
+Une application avec une interface graphique disponible
 ```sh
 python app.py
 ```
 
-It contains three main pages:
-- A management page for adding and deleting skaters
-- A stats page for checking previous training and their contents
-- A scan page to look for captors and start/stop record of training
+L'application contient : 
+- Une page de connexion
+- Une page d'accueil 
+- des pages pop-up lors des actions de l'utilisateur
 
-The record of a training can also be launch by disconnecting (usb wired) a captor, the app will ask for starting a new training.
-When a captor is pluged via usb to the computer, the app will stop a record if there is one and will export the data contains in the captors, next it will erase the memory of the captor (Beware! Erasing the memory take around 1 minute).
-The data exported is on a csv file stock in ```data/new```, the app will automatically detect a new file and will process it with the models to predicts jumps, their types and their success.
+Avant d'afficher à la page d'accueil l'application cherche tous les capteurs disponibles et se connectent à ceci via Bluetooth ET USB.
 
-## Database
+Le lancement d'un enregistrement se fait en débranchant un capteur et l'arrêt de cet enregistrement en rebranchant le capteur.
+Lors de ces étapes des fenêtres de confirmation s'ouvrent pour proposer des choix à l'utilisateur.
 
-The app use a firestore database to stock data.
+Lors de l'arrêt ou via le button sur la page d'accueil on peut exporter les données des capteurs connectés via USB. Cette opération peut prendre un certain temps et nécessite de laisser le capteur branché.
+Les données brutes sont sauvegardés dans des fichiers rangés par date et sont automatiquement traités par l'application pour détecter les sauts et reconnaître les figures effectués durant l'entraînement, ces données traités sont stockés sur un base de données Firebase.
 
-## Training the models
+## Base de donnés
+
+L'application utilise une base de données Firebase pour stockés les données traitées par l'application
+
+## Entraînement des modèles
 
 ```sh
 python3 main.py -t <"model_type">
 ```
 
--t is used for training.
-model_type can be "type" or "success" respectively training the recognition of jumps and their success
+model_type peut être "type" ou "success" entraînant respectivement la reconnaissance des figures et des chutes.
+Le nombre d'époques d'entraînement doit être fixé manuellement dans `main.py`.
 
-## About the dataset
+## Le jeu de données
 
-Current model has been trained with a dataset of roughly 1000 annotated jumps.
-Because of privacy concerns, the dataset is not disclosed.
+Le modèle actuel a été entraîné avec un jeu de données d'environ 1500 sauts annotés.
+Pour des questions de propriété privée ce jeu de données n'est pas public.
 
-This dataset can be extend with new data, in order to do this, you need to use :
+Ce jeu de données peut être entraînés avec de nouvelles données, en utilisant par exemple les données brutes stockés à chaque entraînement pour les annoter manuellement.
 
 ```sh
 python3 main.py -p <"path">
@@ -54,4 +59,4 @@ This command will process a training file to get the jumps file, and a list of t
 
 ## Credits
 
-Made by the S2M for Patinage Quebec.
+Réalisé par le S2M pour Patinage Quebec.

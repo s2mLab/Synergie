@@ -2,39 +2,29 @@ import keras
 from keras import layers
 
 def lstm():
-    model = keras.models.Sequential()
-    model.add(keras.layers.LSTM(128, input_shape=(
-    180, 10)))  # , return_sequences=True)) # considering the length of the arrays is going to be the same
+    temporal_input = keras.Input(shape=(180, 10), name='temporal_input')
+    x = layers.BatchNormalization()(temporal_input)
+    x = keras.layers.LSTM(128, return_sequences=True)(x)
+    x = keras.layers.LSTM(64)(x)
+    x = keras.layers.Dropout(0.4)(x)
+    x = keras.layers.Dense(64, activation='relu')(x)
+    x = keras.layers.Dropout(0.4)(x)
+    x = keras.layers.Dense(16, activation='relu')(x)
 
-    model.add(keras.layers.Dropout(0.4))
-    model.add(keras.layers.Dense(64, activation='relu'))
-    model.add(keras.layers.Dropout(0.5))
-    model.add(keras.layers.Dense(16, activation='relu'))
-    model.add(keras.layers.Dropout(0.2))
-    # softmax
-    model.add(keras.layers.Dense(2, activation='relu'))
+    scalar_input = keras.Input(shape=(2,), name='scalar_input')  # Ex: masse et taille
+    y = layers.Dense(16, activation='relu')(scalar_input)
+
+    combined = layers.concatenate([x, y])
+
+    z = layers.Dense(16, activation="relu")(combined)
+    z = keras.layers.Dropout(0.2)(combined)
+    outputs = keras.layers.Dense(2, activation='softmax')(z)
 
     optimizer = keras.optimizers.Adam(learning_rate=0.00001)
 
-    model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    model = keras.Model([temporal_input, scalar_input], outputs)
 
-    return model
-
-def newmodel():
-
-    model = keras.models.Sequential()
-    model.add(layers.Conv2D(32, kernel_size=(3, 3),
-                activation='relu',
-                input_shape=(400, 9, 1), padding='same'))
-    model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
-    model.add(layers.MaxPooling2D(pool_size=(2, 2)))
-    model.add(layers.Dropout(0.5))
-    model.add(layers.Flatten())
-    model.add(layers.Dense(2, activation='relu'))
-
-    optimizer = keras.optimizers.Adam(learning_rate=0.000001)
-
-    model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
     return model
 
@@ -62,25 +52,34 @@ def transformer(
         num_heads=4,
         ff_dim=4,
         num_transformer_blocks=4,
-        mlp_units=[128],
+        mlp_units=128,
         dropout=0,
         mlp_dropout=0,
 ):
     n_classes = 6
 
-    inputs = keras.Input(shape=input_shape)
-    x = inputs
+    temporal_input = keras.Input(shape=input_shape, name="temporal_input")
+    x = layers.BatchNormalization()(temporal_input)
     for _ in range(num_transformer_blocks):
         x = transformer_encoder(x, head_size, num_heads, ff_dim, dropout)
 
     x = layers.GlobalAveragePooling1D(data_format="channels_first")(x)
-    for dim in mlp_units:
-        x = layers.Dense(dim, activation="relu")(x)
-        x = layers.Dropout(mlp_dropout)(x)
-    outputs = layers.Dense(n_classes, activation="softmax")(x)
-    model = keras.Model(inputs, outputs)
+    x = layers.Dense(mlp_units, activation="relu")(x)
+    x = layers.Dropout(mlp_dropout)(x)
+    x = layers.Dense(16, activation="relu")(x)
+    
+    scalar_input = keras.Input(shape=(2,), name='scalar_input')  # Ex: masse et taille
+    y = layers.Dense(16, activation='relu')(scalar_input)
+
+    combined = layers.concatenate([x, y])
+    
+    z = layers.Dense(16, activation="relu")(combined)
+    z = layers.Dropout(0.2)(x)
+    outputs = layers.Dense(n_classes, activation="softmax")(z)
 
     optimizer = keras.optimizers.Adam(learning_rate=0.00005)
+
+    model = keras.Model([temporal_input, scalar_input], outputs)
 
     model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
