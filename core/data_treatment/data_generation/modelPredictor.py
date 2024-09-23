@@ -28,20 +28,22 @@ class ModelPredictor:
         self.df_jumps.to_csv(os.path.join(dataset_path, filename), index=False)
 
     def predict(self, data : list[pd.DataFrame]):
-        predict_jump = []
+        predict_jump_type = []
+        predict_jump_success = []
         predict_type = np.zeros(len(data))
         predict_success = np.zeros(len(data))
 
         for index,df in enumerate(data):
-            df_predictjump = df[constants.fields_to_keep]
-            if len(df_predictjump) == 400:
-                predict_jump.append(df_predictjump)
+            df_predictjump = df
+            if len(df_predictjump) == 300:
+                predict_jump_type.append(df_predictjump[:240])
+                predict_jump_success.append(df_predictjump[120:])
             else:
                 predict_type[index] = 8
                 predict_success[index] == 2
 
-        prediction_type = self.model_type.predict(np.array(predict_jump))   
-        prediction_success = self.model_success.predict(np.array(predict_jump))
+        prediction_type = self.model_type.predict(np.array(predict_jump_type))   
+        prediction_success = self.model_success.predict(np.array(predict_jump_success))
 
         for i in range(len(prediction_success)):
             if predict_type[i] != 8:

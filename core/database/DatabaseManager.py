@@ -1,3 +1,5 @@
+import os
+import sys
 from typing import List
 import firebase_admin
 from firebase_admin import credentials
@@ -10,7 +12,6 @@ from datetime import datetime
 @dataclass
 class JumpData:
     jump_id : int
-    training_id : int
     jump_type : str
     jump_rotations : float
     jump_success : bool
@@ -19,8 +20,7 @@ class JumpData:
     jump_length : float
 
     def to_dict(self):
-        return {"training_id" : self.training_id,
-         "jump_type" : self.jump_type,
+        return {"jump_type" : self.jump_type,
          "jump_rotations" : self.jump_rotations,
          "jump_success" : self.jump_success,
          "jump_time" : self.jump_time,
@@ -51,7 +51,11 @@ class SkaterData:
 
 class DatabaseManager:
     def __init__(self):
-        cred = credentials.Certificate('s2m-skating-firebase-adminsdk-3ofmb-8552d58146.json')
+        try :
+            json_path = os.path.join(sys._MEIPASS, 's2m-skating-firebase-adminsdk-3ofmb-8552d58146.json')
+        except:
+            json_path = 's2m-skating-firebase-adminsdk-3ofmb-8552d58146.json'
+        cred = credentials.Certificate(json_path)
         try:
             firebase_admin.initialize_app(cred)
         except :
@@ -116,3 +120,39 @@ class DatabaseManager:
         for skater in self.db.collection("users").document(coachId).get().get("access"):
             skatersData.append(SkaterData(skater, self.db.collection("users").document(skater).get().get("name")))
         return skatersData
+
+    def get_all_trainings_for_skater(self, skater_id) -> List[TrainingData]:
+        trainings = self.db.collection("trainings").where("skater_id", "==", skater_id).stream()
+        return [TrainingData(training.id, training.get("skater_id"), training.get("training_date"), training.get("dot_id"), training.get("training_jumps")) for training in trainings]
+    
+    def get_jump_by_id(self, jump_id: str) -> JumpData:
+
+        jump_doc = self.db.collection("jumps").document(jump_id).get()
+        
+        if jump_doc.exists:
+            jump_data = jump_doc.to_dict()
+            return JumpData(
+                jump_id=jump_id,
+                training_id=jump_data["training_id"],
+                jump_type=jump_data["jump_type"],
+                jump_rotations=jump_data["jump_rotations"],
+                jump_success=jump_data["jump_success"],
+                jump_time=jump_data["jump_time"],
+                jump_length=jump_data["jump_length"],
+                jump_max_speed=jump_data["jump_max_speed"]
+            )
+        else:
+            raise ValueError(f"Aucun jump trouvé avec l'identifiant {jump_id}")
+        
+    def get_skater_name_from_training_id(self, training_id) -> str:
+        skater_id = self.get_skater_from_training(training_id)
+        skater_name = self.get_skater_name_from_id(skater_id)
+        return skater_name
+    
+    def get_training_date_from_training_id(self, training_id) -> datetime:
+        training_date = self.db.collection("trainings").document(training_id).get().get("training_date")
+        return training_date
+    
+    def get_skater_name_from_id(self, skater_id : str) -> str:
+        skater_name = self.db.collection("users").document(skater_id).get().get("name")
+        return skater_name

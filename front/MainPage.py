@@ -2,6 +2,7 @@ import threading
 from tkinter.font import BOLD, Font
 from typing import List
 import ttkbootstrap as ttkb
+import webbrowser
 
 from core.utils.DotDevice import DotDevice
 from core.database.DatabaseManager import DatabaseManager
@@ -26,27 +27,46 @@ class MainPage:
         buttonStyle.configure('home.TButton', font=Font(self.frame, size=20, weight=BOLD))
         labelFont = Font(self.root, size=15, weight=BOLD)
         self.waitingFrame = ttkb.Frame(self.frame)
-        waitingLabel= ttkb.Label(self.waitingFrame, text="Waiting for connection", font=labelFont)
+        waitingLabel= ttkb.Label(self.waitingFrame, text="En attente de connexion aux capteurs", font=labelFont)
         waitingLabel.grid(row=0,column=0,pady=50)
         waitingProgress = ttkb.Progressbar(self.waitingFrame, mode='indeterminate', length=200)
         waitingProgress.grid(row=1,column=0)
         waitingProgress.start(10)
         self.waitingFrame.grid(row=0,column=0)
         self.frame.grid(sticky="nswe")
-    
+        
     def make_dot_page(self):
-        self.waitingFrame.destroy()
+        self.frame.destroy()
+        self.frame = ttkb.Frame(self.root)
+        self.frame.grid_rowconfigure(0,weight=1)
+        self.frame.grid_rowconfigure(1,weight=1)
+        self.frame.grid_rowconfigure(2,weight=1)
+        self.frame.grid_columnconfigure(0, weight=1)
+
         self.dotPage = DotPage(self.frame, self.dotsConnected)
         self.dotPage.grid(row=0,column=0,sticky="nswe")
+
         self.make_export_button()
-        self.frame.update()
+
+        labelFont = Font(self.root, size=15, weight=BOLD)
+        buttonStyle = ttkb.Style()
+        buttonStyle.configure('home.TButton', font=Font(self.frame, size=20, weight=BOLD))
+        usageFrame = ttkb.Frame(self.frame)
+        usageFrame.grid_columnconfigure(0, weight=1, pad=200)
+        usageFrame.grid_columnconfigure(1, weight=1)
+        ttkb.Label(usageFrame, text="Débranchez un capteur pour commencer un enregistrement", font=labelFont).grid(row=0,column=0)
+        ttkb.Label(usageFrame, text="Rebranchez un capteur pour arrêter un enregistrement", font=labelFont).grid(row=1,column=0)
+        ttkb.Button(usageFrame, text="Ouvrir page de visualisation", style="home.TButton", command=lambda : webbrowser.open('https://synergie-qc.streamlit.app/')).grid(row=0,column=1, rowspan=2, sticky="nswe")
+        usageFrame.grid(row=2,column=0)
+
+        self.frame.grid(sticky="nswe")
         self.run_periodic_background_func()
     
     def make_export_button(self):
         self.estimatedTime = self.dot_manager.getExportEstimatedTime()
         self.exportFrame = ttkb.Frame(self.frame)
-        ttkb.Button(self.exportFrame, text=f'Export data from all sensors, estimated time : {round(self.estimatedTime,0)} min', style="home.TButton", command=self.export_all_dots).grid(row=0, column=0)
-        self.saveFile = ttkb.Checkbutton(self.exportFrame, text="Save extra data (for research)")
+        ttkb.Button(self.exportFrame, text=f'Exporter les données de tout les capteurs, temps estimé : {round(self.estimatedTime,0)} min', style="home.TButton", command=self.export_all_dots).grid(row=0, column=0)
+        self.saveFile = ttkb.Checkbutton(self.exportFrame, text="Sauvergarder plus de données (pour la recherche)")
         self.saveFile.state(['!alternate'])
         self.saveFile.grid(row=1,column=0)
         self.exportFrame.grid(row=1,column=0)

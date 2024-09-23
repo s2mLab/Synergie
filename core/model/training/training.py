@@ -35,7 +35,7 @@ class Trainer:
     def plot_confusion_matrix(self, path):
         model = self.model_load_best(path)
 
-        y_pred = model.predict(self.dataset.features_test)
+        y_pred = model.predict({"temporal_input" : self.dataset.temporal_features_test, "scalar_input" : self.dataset.scalar_features_test})
         y_pred2 = []
         for x in y_pred:
             y_pred2.append(np.argmax(x))
@@ -54,16 +54,38 @@ class Trainer:
         """
 
         self.model.summary()
-
-        # callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
-        # signal.signal(signal.SIGINT, signal_handler)
         try:
             trainin = self.model.fit(
-                self.dataset.features_train,
+                {"temporal_input" : self.dataset.temporal_features_train, "scalar_input" : self.dataset.scalar_features_train},
                 self.dataset.labels_train,
                 epochs=epochs,
                 validation_data=self.dataset.val_dataset,
                 callbacks=[self.model_save_best(self.model_filepath)],
+            )
+        except KeyboardInterrupt:
+            self.plot(self.model_filepath)
+
+        if plot:
+            self.model = core.model.model.load_model(self.model_filepath)
+            self.plot(self.model_filepath)
+
+    def train_success(self, epochs: int = 100, plot: bool = True):
+        """
+        Do the training, and plot the confusion matrix and losses through epochs
+        :param epochs:
+        :param plot:
+        :return: none
+        """
+
+        self.model.summary()
+        try:
+            trainin = self.model.fit(
+                {"temporal_input" : self.dataset.temporal_features_train, "scalar_input" : self.dataset.scalar_features_train},
+                self.dataset.labels_train,
+                epochs=epochs,
+                validation_data=self.dataset.val_dataset,
+                callbacks=[self.model_save_best(self.model_filepath)],
+                class_weight={0 : 10, 1 : 1}
             )
         except KeyboardInterrupt:
             self.plot(self.model_filepath)

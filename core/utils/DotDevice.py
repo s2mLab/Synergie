@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import sys
 from threading import Event
 import time
 from movelladot_pc_sdk.movelladot_pc_sdk_py39_64 import XsDotDevice, XsDotUsbDevice, XsDotConnectionManager, XsDotCallback, XsPortInfo, XsDataPacket
@@ -78,7 +79,10 @@ class DotDevice(XsDotCallback):
     
     def loadImages(self):
         fontTag = ImageFont.truetype(font="arialbd.ttf",size=60)
-        imgActive = Image.open(f"img/Dot_active.png")
+        try:
+            imgActive = Image.open(f"{sys._MEIPASS}/img/Dot_active.png")
+        except:
+            imgActive = Image.open(f"img/Dot_active.png")
         d = ImageDraw.Draw(imgActive)
         text = self.deviceTagName
         x = 0
@@ -90,7 +94,10 @@ class DotDevice(XsDotCallback):
         imgActive = imgActive.resize((116, 139))
         self.imageActive = ImageTk.PhotoImage(imgActive)
 
-        imgInactive = Image.open(f"img/Dot_inactive.png")
+        try:
+            imgInactive = Image.open(f"{sys._MEIPASS}/img/Dot_inactive.png")
+        except:
+            imgInactive = Image.open(f"img/Dot_inactive.png")
         d = ImageDraw.Draw(imgInactive)
         d.text( (x,65), text,font=fontTag, fill="black")
         imgInactive = imgInactive.resize((116, 139))
@@ -156,8 +163,8 @@ class DotDevice(XsDotCallback):
                     date = datetime.fromtimestamp(dateRecord).strftime("%Y_%m_%d")
                     startSampleTime = df["SampleTimeFine"][0]
                     newSampleTimeFine = []
-                    for time in df["SampleTimeFine"]:
-                        newTime = time - startSampleTime
+                    for timeFine in df["SampleTimeFine"]:
+                        newTime = timeFine - startSampleTime
                         if newTime < 0:
                             newSampleTimeFine.append(newTime + 2**32)
                         else:
@@ -192,7 +199,7 @@ class DotDevice(XsDotCallback):
                     else:
                         val_rot = np.ceil(val_rot-0.5)+0.5
                     jump_data = JumpData(0, training_id, jumpType(int(row["type"])).name, val_rot, bool(row["success"]), jump_time, float(row["rotation_speed"]), float(row["length"]))
-                    trainingJumps.append(self.db_manager.save_jump_data(jump_data))
+                    trainingJumps.append(jump_data.to_dict())
                 else:
                     jump_data = JumpData(0, training_id, jumpType(int(row["type"])).name, 0, bool(row["success"]), jump_time, float(row["rotation_speed"]), float(row["length"]))
                     unknow_rotation.append(jump_data)
@@ -200,7 +207,7 @@ class DotDevice(XsDotCallback):
                 self.db_manager.add_jumps_to_training(training_id, trainingJumps)
             else:
                 for jump in unknow_rotation:
-                    trainingJumps.append(self.db_manager.save_jump_data(jump))
+                    trainingJumps.append(jump.to_dict())
                 self.db_manager.add_jumps_to_training(training_id, trainingJumps)
         except:
             pass

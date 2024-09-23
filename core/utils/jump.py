@@ -31,7 +31,8 @@ class Jump:
         self.df["Combination"] = [int(self.combinate)]*len(self.df)
         self.df_success = self.df[120:] 
         self.df_type = self.df[:240]
-
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        df.dropna(subset=["Gyr_X_unfiltered"], how="all", inplace=True)
         self.max_rotation_speed = round(df['Gyr_X_unfiltered'][start:end].abs().max()/360,1)
 
     def calculate_rotation(self, df):

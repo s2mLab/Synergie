@@ -9,16 +9,13 @@ if os.name == 'nt':
     from winrt.windows.devices import radios
 
 async def bluetooth_power(turn_on):
-    if os.name == 'nt':
-        all_radios = await radios.Radio.get_radios_async()
-        for this_radio in all_radios:
-            if this_radio.kind == radios.RadioKind.BLUETOOTH:
-                if turn_on:
-                    result = await this_radio.set_state_async(radios.RadioState.ON)
-                else:
-                    result = await this_radio.set_state_async(radios.RadioState.OFF)
-    else:
-        pass
+    all_radios = await radios.Radio.get_radios_async()
+    for this_radio in all_radios:
+        if this_radio.kind == radios.RadioKind.BLUETOOTH:
+            if turn_on:
+                result = await this_radio.set_state_async(radios.RadioState.ON)
+            else:
+                result = await this_radio.set_state_async(radios.RadioState.OFF)
 
 class DotManager:
     def __init__(self, db_manager : DatabaseManager) -> None:
@@ -29,7 +26,12 @@ class DotManager:
 
     def firstConnection(self) -> tuple[bool, List[str]]:
         check = True
-        asyncio.run(bluetooth_power(False))
+        if os.name == 'nt':
+            asyncio.run(bluetooth_power(False))
+        elif os.name == 'posix':
+            os.system('rfkill block bluetooth')
+        else:
+            pass
         xdpcHandler = XdpcHandler()
         if not xdpcHandler.initialize():
             xdpcHandler.cleanup()
@@ -41,7 +43,12 @@ class DotManager:
             self.portInfoUsb[str(device.deviceId())] = device.portInfo()
         xdpcHandler.cleanup()
 
-        asyncio.run(bluetooth_power(True))
+        if os.name == 'nt':
+            asyncio.run(bluetooth_power(True))
+        elif os.name == 'posix':
+            os.system('rfkill unblock bluetooth')
+        else:
+            pass
         xdpcHandler = XdpcHandler()
         if not xdpcHandler.initialize():
             xdpcHandler.cleanup()

@@ -1,4 +1,5 @@
 import time
+import sys
 from tkinter import VERTICAL
 from PIL import Image, ImageTk
 from tkinter.font import BOLD, Font
@@ -17,7 +18,10 @@ class StartingPage:
 
         self.window = ttkb.Toplevel(title="Confirmation", size=(1400,400), topmost=True)
         self.window.place_window_center()
-        ico = Image.open('img/Logo_s2mJUMP_RGB.png')
+        try:
+            ico = Image.open(f'{sys._MEIPASS}/img/Logo_s2mJUMP_RGB.png')
+        except:
+            ico = Image.open(f'img/Logo_s2mJUMP_RGB.png')
         photo = ImageTk.PhotoImage(ico)
         self.window.wm_iconphoto(False, photo)
         self.window.grid_rowconfigure(0, weight=0)
@@ -25,7 +29,7 @@ class StartingPage:
         self.window.grid_columnconfigure(0, weight=1, pad=20)
         self.window.grid_columnconfigure(1, weight=0)
 
-        self.label = ttkb.Label(self.window, text=f"Starting a training on sensor {self.deviceTag}", font=Font(self.window, size=20, weight=BOLD))
+        self.label = ttkb.Label(self.window, text=f"Lancer un enregistrement sur le capteur {self.deviceTag}", font=Font(self.window, size=20, weight=BOLD))
         self.label.grid(row=0,column=0,columnspan=2, pady=20)
 
         self.canvas = ttkb.Canvas(self.window)
@@ -74,9 +78,9 @@ class StartingPage:
         self.label.destroy()
         self.frame = ttkb.Frame(self.window)
         if recordStarted :
-            message = f"Record started on sensor {self.deviceTag} for {skaterName}"
+            message = f"Enregistrement commencé sur le capteur {self.deviceTag} pour {skaterName}"
         else : 
-            message = "Error during process, cannot start the recording"
+            message = "Erreur durant le lancement, impossible de lancer l'enregistrement"
         label = ttkb.Label(self.frame, text=message, font=Font(self.window, size=20, weight=BOLD))
         label.grid()
         self.frame.grid(row=1,column=0)
