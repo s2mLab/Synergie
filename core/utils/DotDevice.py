@@ -224,11 +224,15 @@ class DotDevice(XsDotCallback):
                 jump_time_min, jump_time_sec = row["videoTimeStamp"].split(":")
                 jump_time = '{:02d}:{:02d}'.format(int(jump_time_min), int(jump_time_sec))
                 val_rot = float(row["rotations"])
-                if val_rot >= 0.5:
-                    if row["type"] != 5:
-                        val_rot = np.ceil(val_rot)
+                if row["type"] < 5 and val_rot > 0.5:
+                    if val_rot < 2:
+                        val_rot = np.ceil(val_rot-0.3)
                     else:
-                        val_rot = np.ceil(val_rot-0.5)+0.5
+                        val_rot = np.ceil(val_rot-0.15)
+                    jump_data = JumpData(0, training_id, jumpType(int(row["type"])).name, val_rot, bool(row["success"]), jump_time, float(row["rotation_speed"]), float(row["length"]))
+                    trainingJumps.append(jump_data.to_dict())
+                elif row["type"] == 5 and val_rot > 0.8: 
+                    val_rot = np.ceil(val_rot-0.7)+0.5
                     jump_data = JumpData(0, training_id, jumpType(int(row["type"])).name, val_rot, bool(row["success"]), jump_time, float(row["rotation_speed"]), float(row["length"]))
                     trainingJumps.append(jump_data.to_dict())
                 else:
