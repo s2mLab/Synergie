@@ -10,10 +10,16 @@ import pandas as pd
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from constants import *
 
-from core.data_treatment.data_generation.exporter import export
 from core.database.DatabaseManager import DatabaseManager, JumpData
 
 class DotDevice(XsDotCallback):
+    """
+    Class permettant de gérer individuellement les capteurs, elle remplace les classes fournis par movella_pc_sdk :
+    XsDotDevice : capteur connecté en bluetooth
+    XsDotUsbDevice : capteur connecté en USB
+    Les deux classes sont fusionnéees dans celle-ci.
+    La classe est une extension de XsDotCallback qui permet d'avoir des retours des capteurs
+    """
     def __init__(self, portInfoUsb : XsPortInfo, portInfoBt : XsPortInfo, db_manager : DatabaseManager):
         XsDotCallback.__init__(self)
         self.portInfoUsb = portInfoUsb
@@ -50,9 +56,13 @@ class DotDevice(XsDotCallback):
 
         self.count = 0
         self.packetsReceived = []
+        self.synchroTime = 0
         self.exportDone = False
 
     def initializeBt(self):
+        """
+        Initialise la connexion bluetooth
+        """
         self.btManager.closePort(self.portInfoBt)
         checkDevice = False
         while not checkDevice:
@@ -68,8 +78,11 @@ class DotDevice(XsDotCallback):
                     time.sleep(1)
                     checkDevice = (device.deviceTagName() != '') and (device.batteryLevel() != 0)
         self.btDevice = device
-    
+
     def initializeUsb(self):
+        """
+        Initialise la connexion USB
+        """
         self.usbManager.closePort(self.portInfoUsb)
         device = None
         while device is None:
@@ -78,6 +91,9 @@ class DotDevice(XsDotCallback):
         self.usbDevice = device
     
     def loadImages(self):
+        """
+        Charge les images des capteurs pour l'interface graphique
+        """
         fontTag = ImageFont.truetype(font="arialbd.ttf",size=60)
         try:
             imgActive = Image.open(f"{sys._MEIPASS}/img/Dot_active.png")
@@ -104,6 +120,9 @@ class DotDevice(XsDotCallback):
         self.imageInactive = ImageTk.PhotoImage(imgInactive)
     
     def startRecord(self):
+        """
+        Commence un enregistrement sur le capteur
+        """
         self.isRecording = True
         if not self.btDevice.startRecording():
             self.initializeBt()
@@ -113,6 +132,9 @@ class DotDevice(XsDotCallback):
         return self.isRecording
 
     def stopRecord(self):
+        """
+        Arrête un enregistrement sur le capteur
+        """
         self.isRecording = False
         if not self.btDevice.stopRecording():
             self.initializeBt()
@@ -121,6 +143,11 @@ class DotDevice(XsDotCallback):
         return not self.isRecording
 
     def exportData(self, saveFile : bool, extractEvent : Event):
+        """
+        Export les données du capteurs
+        saveFile : définis si on veut extraire toute les infos disponibles (et non seulement celle nécessaire aux modèles)
+        extractEvent : event pour informer le thread principale que l'extraction est finie
+        """
         self.saveFile = saveFile
         print("Exporting...")
         self.exportDone = False
@@ -148,7 +175,6 @@ class DotDevice(XsDotCallback):
             trainingId = self.db_manager.get_current_record(self.deviceId)
             if trainingId != "":
                 self.db_manager.set_training_date(trainingId, dateRecord)
-                skaterId = self.db_manager.get_skater_from_training(trainingId)
                 if not self.usbDevice.startExportRecording(recordingIndex):
                     print(f'Could not export recording. Reason: {self.usbDevice.lastResultText()}')
                 else:
@@ -170,10 +196,11 @@ class DotDevice(XsDotCallback):
                         else:
                             newSampleTimeFine.append(newTime)
                     df["SampleTimeFine"] = newSampleTimeFine
+                    self.synchroTime = max(0, self.synchroTime - startSampleTime)
                     os.makedirs(f"data/raw/{date}", exist_ok = True)
-                    df.to_csv(f"data/raw/{date}/{trainingId}.csv", index=False)
+                    df.to_csv(f"data/raw/{date}/{self.synchroTime}_{trainingId}.csv", index=False)
 
-                    self.predict_training(trainingId, skaterId, df)
+                    self.predict_training(trainingId, df)
                     self.db_manager.remove_current_record(self.deviceId, trainingId)
                     self.recordingCount -= 1
         
@@ -183,9 +210,13 @@ class DotDevice(XsDotCallback):
         extractEvent.set()
         self.currentImage = self.imageActive
 
-    def predict_training(self, training_id : str, skater_id : str, df : pd.DataFrame):
+    def predict_training(self, training_id : str, df : pd.DataFrame):
+        from core.data_treatment.data_generation.exporter import export
+        """
+        Utilisation des modèles de prédiction pour avoir les infos de l'enregistrement
+        """
         try:
-            df = export(skater_id, df)
+            df = export(df)
             print("End of process")
             trainingJumps = []
             unknow_rotation = []
@@ -213,6 +244,9 @@ class DotDevice(XsDotCallback):
             pass
         
     def onRecordedDataAvailable(self, device, packet : XsDataPacket):
+        """
+        Lorsque le capteur est en train d'exporter les données, cette fonction permet de capter les informations renvoyées
+        """
         self.count += 1
         euler = packet.orientationEuler()
         captor = packet.calibratedData()
@@ -224,12 +258,18 @@ class DotDevice(XsDotCallback):
         self.packetsReceived.append(data)
     
     def onRecordedDataDone(self, device):
+        """
+        Fonction qui s'active lorsque le capteur a fini d'extraire les données
+        """
         self.exportDone = True
     
     def __eq__(self, device) -> bool:
         return (self.usbDevice == device.usbDevice) and (self.btDevice == device.btDevice)
     
     def getExportEstimatedTime(self) -> int:
+        """
+        Calcul une estimation du temps d'extraction
+        """
         estimatedTime = 0
         for index in range(1,self.usbDevice.recordingCount()+1):
             estimatedTime = estimatedTime + round(self.usbDevice.getRecordingInfo(index).storageSize()/(237568*8),1)
@@ -237,12 +277,24 @@ class DotDevice(XsDotCallback):
 
     def onBatteryUpdated(self, device: XsDotDevice, batteryLevel: int, chargingStatus: int):
         self.batteryLevel = batteryLevel
+    
+    def onButtonClicked(self, device: XsDotDevice, timestamp : int):
+        """
+        Appuyer sur le bouton pendant l'enregistrement stocke l'instant pour pouvoir synchroniser avec une vidéo lors des collectes de données
+        """
+        self.synchroTime = timestamp
 
     def closeUsb(self):
+        """
+        Ferme la connexion USB
+        """
         self.usbManager.closePort(self.portInfoUsb)
         self.isPlugged = False
     
     def openUsb(self):
+        """
+        Ouvre la connexion USB
+        """
         device = None
         while device is None:
             self.usbManager.openPort(self.portInfoUsb)

@@ -18,6 +18,9 @@ async def bluetooth_power(turn_on):
                 result = await this_radio.set_state_async(radios.RadioState.OFF)
 
 class DotManager:
+    """
+    Class pour gérer la première connexion aux capteurs
+    """
     def __init__(self, db_manager : DatabaseManager) -> None:
         self.db_manager = db_manager
         self.error = False
@@ -25,6 +28,14 @@ class DotManager:
         self.previousConnected : List[DotDevice] = []
 
     def firstConnection(self) -> tuple[bool, List[str]]:
+        """
+        Première connexion aux capteurs, pour cela on désactive d'abord le bluetooth pour se connecter en USB aux capteurs,
+        puis on réactive le bluetooth pour détecter les possibles connections bluetooth.
+        On lie ces deux connexions grâce au deviceId et on créé des DotDevice qui englobe ces deux connexions pour un capteur.
+        Il y a aussi une vérification lors de l'initialisation que les connexions bluetooth correspondent aux connexions USB disponible
+        """
+        self.devices = []
+        self.previousConnected = []
         check = True
         if os.name == 'nt':
             asyncio.run(bluetooth_power(False))
@@ -78,6 +89,9 @@ class DotManager:
         return (check, unconnectedDevice)
     
     def checkDevices(self) -> tuple[List[DotDevice], List[DotDevice]]:
+        """
+        Détection des capteurs connectés en USB afin de capter un branchement ou un débranchement
+        """
         connected : List[DotDevice] = []
         for device in self.devices:
             if device.btDevice.isCharging():
@@ -102,6 +116,9 @@ class DotManager:
         return(lastConnected,lastDisconnected)
 
     def getExportEstimatedTime(self):
+        """
+        Estimation du temps d'extraction pour tous les capteurs en même temps
+        """
         estimatedTime = [0]
         for device in self.devices:
             estimatedTime.append(device.getExportEstimatedTime())
@@ -111,6 +128,9 @@ class DotManager:
         return self.devices
     
     def connectNewDevice(self, portInfoBt : XsPortInfo):
+        """
+        Ajoute un capteur à la base de données
+        """
         manager = XsDotConnectionManager()
         checkDevice = False
         while not checkDevice:

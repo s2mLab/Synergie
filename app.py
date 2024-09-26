@@ -5,7 +5,6 @@ from tkinter import messagebox
 import threading
 
 from front.ConnectionPage import ConnectionPage
-from core.data_treatment.data_generation.exporter import export
 from core.database.DatabaseManager import *
 from core.utils.DotManager import DotManager
 from front.StartingPage import StartingPage
