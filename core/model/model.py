@@ -84,6 +84,33 @@ def transformer(
     model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
 
+def transformerTraining(hp):
+    input_shape = (240, 10)
+    head_size = hp.Int('head_size', min_value=32, max_value=512, step=32)
+    num_heads = hp.Int('num_heads', min_value=2, max_value=16, step=2)
+    ff_dim = hp.Int('ff_dim', min_value=128, max_value=2048, step=128)
+    num_transformer_blocks = hp.Int('num_transformer_blocks', min_value=1, max_value=12, step=1)
+    mlp_units = 128
+    dropout = 0.3
+    mlp_dropout = 0.1
+    n_classes = 6
+    learning_rate = 0.00005
+
+    inputs = keras.Input(shape=input_shape)
+    x = layers.BatchNormalization()(inputs)
+    for _ in range(num_transformer_blocks):
+        x = transformer_encoder(x, head_size, num_heads, ff_dim, dropout)
+
+    x = layers.GlobalAveragePooling1D(data_format="channels_first")(x)
+    x = layers.Dense(mlp_units, activation="relu")(x)
+    x = layers.Dropout(mlp_dropout)(x)
+    outputs = layers.Dense(n_classes, activation="softmax")(x)
+    model = keras.Model(inputs, outputs)
+
+    optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+
+    model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+    return model
 
 def save_model(model, path="saved_models/model.keras"):
     keras.saving.save_model(model, path, overwrite=True)

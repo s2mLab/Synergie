@@ -4,34 +4,14 @@ import sys
 import numpy as np
 import pandas as pd
 
+from keras_tuner import BayesianOptimization
+import keras
+
 import constants
 from core.data_treatment.data_generation.exporter import export, old_export
-from core.database.DatabaseManager import JumpData
+from core.database.DatabaseManager import DatabaseManager, JumpData
 from core.model import model
-from core.model.training import training
 from core.model.training.loader import Loader
-from core.data_treatment.data_generation.modelPredictor import ModelPredictor
-
-def predict_training(df : pd.DataFrame):
-        try:
-            df = export("", df)
-            for iter,row in df.iterrows():
-                jump_time_min, jump_time_sec = row["videoTimeStamp"].split(":")
-                jump_time = '{:02d}:{:02d}'.format(int(jump_time_min), int(jump_time_sec))
-                val_rot = float(row["rotations"])
-                if val_rot >= 0.5:
-                    if row["type"] != 5:
-                        val_rot = np.ceil(val_rot)
-                    else:
-                        val_rot = np.ceil(val_rot-0.5)+0.5
-                    jump_data = JumpData(0, 0, constants.jumpType(int(row["type"])).name, val_rot, bool(row["success"]), jump_time, float(row["rotation_speed"]), float(row["length"]))
-                    print(jump_data.to_dict())
-                else:
-                    jump_data = JumpData(0, 0, constants.jumpType(int(row["type"])).name, 0, bool(row["success"]), jump_time, float(row["rotation_speed"]), float(row["length"]))
-                    print(jump_data.to_dict())
-        except:
-            pass
-
 
 def main():
     """
@@ -66,36 +46,84 @@ def main():
             trainer = training.Trainer(dataset, model.lstm(), constants.modelsuccess_filepath)
             trainer.train_success(epochs=20)
 
-    if "-test" in sys.argv:  # test
-        session_name = sys.argv[sys.argv.index("-test") + 1]
-        session = constants.sessions[session_name]
-        path_anno = os.path.join("data/annotated/",session["path"])
-        path_pend = os.path.join("data/pending/",session["path"])
-        model_test_type = model.load_model(constants.modeltype_filepath)
-        model_test_success = model.load_model(constants.modelsuccess_filepath)
-        prediction = ModelPredictor(model_test_type, model_test_success)
-        prediction.load_from_csv(path_pend)
-        error_type = prediction.checktype(path_anno)
-        error_success = prediction.checksuccess(path_anno)
-        print(error_type)
-        print(error_success)
-
     if "-repredict" in sys.argv:
-        for day in os.listdir("data/new"):
+        db_manager = DatabaseManager()
+        for day in os.listdir("data/raw"):
             print(day)
-            for hour in os.listdir(f"data/new/{day}"):
-                print(hour)
-                if os.path.isdir(f"data/new/{day}/{hour}"):
-                    for trainings in os.listdir(f"data/new/{day}/{hour}"):
-                        df = pd.read_csv(f"data/new/{day}/{hour}/{trainings}")
-                        predict_training(df)
+            for training in os.listdir(f"data/raw/{day}"):
+                training_id = training.replace(".csv", "").split("_")[1]
+                df = export(df)
+                trainingJumps = []
+                unknow_rotation = []
+                db_manager.add_jumps_to_training(training_id, trainingJumps)
+                for iter,row in df.iterrows():
+                    jump_time_min, jump_time_sec = row["videoTimeStamp"].split(":")
+                    jump_time = '{:02d}:{:02d}'.format(int(jump_time_min), int(jump_time_sec))
+                    val_rot = float(row["rotations"])
+                    if val_rot >= 0.5:
+                        if row["type"] != 5:
+                            val_rot = np.ceil(val_rot)
+                        else:
+                            val_rot = np.ceil(val_rot-0.5)+0.5
+                        jump_data = JumpData(0, training_id, constants.jumpType(int(row["type"])).name, val_rot, bool(row["success"]), jump_time, float(row["rotation_speed"]), float(row["length"]))
+                        trainingJumps.append(jump_data.to_dict())
+                    else:
+                        jump_data = JumpData(0, training_id, constants.jumpType(int(row["type"])).name, 0, bool(row["success"]), jump_time, float(row["rotation_speed"]), float(row["length"]))
+                        unknow_rotation.append(jump_data)
+                if trainingJumps != []:
+                    db_manager.add_jumps_to_training(training_id, trainingJumps)
                 else:
-                    df = pd.read_csv(f"data/new/{day}/{hour}")
-                    predict_training(df)
+                    for jump in unknow_rotation:
+                        trainingJumps.append(jump.to_dict())
+                    db_manager.add_jumps_to_training(training_id, trainingJumps)
     
     if "-rep" in sys.argv:
         for session in constants.sessions.values():
             old_export(session["path"], session["sample_time_fine_synchro"])
+
+    if "-np" in sys.argv:
+        old_export()
+
+    if "-h" in sys.argv:
+        path = "data/annotated/total/"
+        dataset = Loader(path).get_type_data()
+        tuner = BayesianOptimization(
+            model.transformerTraining,
+            objective='val_accuracy',
+            max_trials=10,
+            directory='hptrain',
+            project_name="transformer_tuning"
+        )
+        tuner.search(dataset.features_train, dataset.labels_train, epochs=50, validation_data=(dataset.features_test, dataset.labels_test))
+        
+        best_model = tuner.get_best_models(num_models=1)[0]
+        path="core/model/saved_models/checkpoint"
+        keras.saving.save_model(best_model, path, overwrite=True)
+
+        # Afficher les meilleurs hyperparamètres trouvés
+        best_hyperparameters = tuner.get_best_hyperparameters(num_trials=1)[0]
+        print("Meilleurs hyperparamètres:", best_hyperparameters.values)
+
+
+    if "-hsuccess" in sys.argv:
+        path = "data/annotated/total/"
+        dataset = Loader(path).get_success_data()
+        tuner = BayesianOptimization(
+            model.lstm,
+            objective='val_accuracy',
+            max_trials=10,
+            directory='hptrainsuccess',
+            project_name="transformer_tuning",
+        )
+        tuner.search(dataset.features_train, dataset.labels_train, epochs=50, validation_data=(dataset.features_test, dataset.labels_test), class_weight={0 : 10, 1 : 1})
+
+        best_model = tuner.get_best_models(num_models=1)[0]
+        path="core/model/saved_models/success"
+        keras.saving.save_model(best_model, path, overwrite=True)
+
+        # Afficher les meilleurs hyperparamètres trouvés
+        best_hyperparameters = tuner.get_best_hyperparameters(num_trials=1)[0]
+        print("Meilleurs hyperparamètres:", best_hyperparameters.values)
 
 if __name__ == "__main__":
     main()
